@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dolo ERP系統</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel for JSX compilation in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- XLSX Library (SheetJS) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <!-- JSZip & FileSaver (用於打包備份) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- html2canvas (用於將報表轉為圖片) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- React & ReactDOM (UMD 版本，支援 file:// 直接開啟) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <style>
+        /* 一般樣式 */
+        .icon-emoji { display: inline-block; width: 1.25rem; text-align: center; margin-right: 0.5rem; }
+        
+        /* 錯誤訊息樣式 */
+        #error-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 9999; padding: 2rem; color: #dc2626; overflow: auto; }
+
+        /* --- 列印專用樣式 (A4 最佳化) --- */
+        @media print {
+            @page {
+                size: A4 portrait; /* 強制 A4 直向 */
+                margin: 1.5cm;     /* 設定邊界 */
+            }
+
+            body {
+                background: white;
+                font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+                font-size: 12pt;
+                color: black;
+                -webkit-print-color-adjust: exact; /* 保留背景色 (如果有) */
+                print-color-adjust: exact;
+            }
+
+            /* 隱藏網頁介面元素 (側邊欄、背景、按鈕等) */
+            .print\:hidden, 
+            .sidebar-container, 
+            button, 
+            .no-print {
+                display: none !important;
+            }
+
+            /* 重置 Modal 樣式，使其成為文件流的一部分 */
+            .fixed.inset-0 {
+                position: static !important;
+                z-index: auto !important;
+                background: white !important;
+                padding: 0 !important;
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+            }
+
+            .bg-white.rounded-lg.shadow-2xl {
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                max-width: none !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+            }
+
+            /* 表格列印優化 */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 10px;
+                margin-bottom: 20px;
+                font-size: 10pt; /* 縮小字體以容納更多欄位 */
+            }
+
+            thead {
+                display: table-header-group; /* 換頁時重複標題 */
+                border-bottom: 2px solid #000;
+            }
+
+            tr {
+                break-inside: avoid; /* 盡量不切斷列 */
+            }
+
+            th, td {
+                border: 1px solid #333 !important; /* 強制顯示邊框 */
+                padding: 6px 4px !important;
+                text-align: left;
+                color: #000 !important; /* 強制黑色文字 */
+            }
+
+            th {
+                background-color: #f3f4f6 !important; /* 標題淺灰底 */
+                font-weight: bold;
+                text-align: center;
+            }
+
+            td.text-right { text-align: right; }
+            td.text-center { text-align: center; }
+
+            /* 隱藏捲軸 */
+            ::-webkit-scrollbar { display: none; }
+
+            /* 簽名欄位排版 */
+            .signature-section {
+                margin-top: 2cm;
+                display: flex !important;
+                justify-content: space-between;
+                break-inside: avoid;
+            }
+            
+            .signature-box {
+                border-top: 1px solid #000;
+                width: 200px;
+                text-align: center;
+                padding-top: 8px;
+                font-size: 12pt;
+            }
+            
+            /* 標題與資訊區 */
+            .print-header {
+                text-align: center;
+                margin-bottom: 1.5cm;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+            }
+            .print-header h1 {
+                font-size: 18pt;
+                font-weight: bold;
+                margin-bottom: 5px;
+            }
+            .print-info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 10px;
+                font-size: 12pt;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans">
+    <div id="root" class="flex items-center justify-center h-screen text-gray-500">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p>系統載入中...</p>
+        </div>
+    </div>
+
+    <div id="error-overlay">
+        <h1 class="text-2xl font-bold mb-4">系統發生錯誤</h1>
+        <pre id="error-message" class="bg-gray-100 p-4 rounded border border-red-200"></pre>
+    </div>
+
+    <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            const overlay = document.getElementById('error-overlay');
+            const message = document.getElementById('error-message');
+            overlay.style.display = 'block';
+            message.textContent = `Error: ${msg}\nLine: ${lineNo}\nFile: ${url}`;
+            return false;
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const BONUS_RATIOS = {
+            dept: 0.55, company: 0.45, coo: 0.30, admin: 0.10, marketing: 0.05,
+            design: 0.05, tech: 0.05, opCost: 0.25, dividends: 0.15, reserve: 0.05
+        };
+
+        const DEPARTMENTS_CONFIG = [
+            { id: 'coo', name: '總營運長', ratio: 30, key: 'coo' },
+            { id: 'admin', name: '會計行政&業務派工', ratio: 10, key: 'admin' },
+            { id: 'marketing', name: '系統維護&行銷管理', ratio: 5, key: 'marketing' },
+            { id: 'design', name: '美編設計&社群管理', ratio: 5, key: 'design' },
+            { id: 'tech', name: '技術主管', ratio: 5, key: 'tech' }
+        ];
+
+        // --- Print Utility Function (New Window) ---
+        const printReport = (title, metaInfo, tableHeaders, tableData, totalInfo, signatures) => {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) { alert('請允許開啟彈跳視窗以列印報表'); return; }
+            
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${title}</title>
+                    <style>
+                        @page { size: A4 portrait; margin: 1.5cm; }
+                        body { font-family: "Microsoft JhengHei", "Noto Sans TC", sans-serif; padding: 20px; color: #000; font-size: 11pt; }
+                        h1 { text-align: center; font-size: 20pt; margin: 0 0 5px 0; font-weight: 900; }
+                        .subtitle { text-align: center; font-size: 10pt; color: #555; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #000; }
+                        .meta-row { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12pt; }
+                        .meta-label { font-weight: bold; }
+                        
+                        .total-section { border: 2px solid #000; padding: 10px 15px; margin: 15px 0; display: flex; justify-content: space-between; align-items: center; background-color: #f8f8f8; }
+                        .total-label { font-weight: bold; font-size: 13pt; }
+                        .total-value { font-weight: 900; font-size: 15pt; font-family: "Courier New", monospace; }
+                        
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 10pt; }
+                        th, td { border: 1px solid #444; padding: 6px 8px; vertical-align: middle; }
+                        th { background-color: #eee; font-weight: bold; text-align: center; white-space: nowrap; }
+                        
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        /* 金額專用字體：等寬 + 數字對齊 */
+                        .money { font-family: "Courier New", monospace; font-weight: bold; font-variant-numeric: tabular-nums; }
+                        
+                        .signatures { display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid; }
+                        .sign-box { width: 200px; border-top: 1px solid #000; padding-top: 10px; text-align: center; font-size: 12pt; }
+                        
+                        @media print {
+                            body { padding: 0; }
+                            .total-section { background-color: white !important; -webkit-print-color-adjust: exact; }
+                            th { background-color: #eee !important; -webkit-print-color-adjust: exact; }
+                            /* 避免表格斷裂 */
+                            table { page-break-inside: auto; }
+                            tr { page-break-inside: avoid; page-break-after: auto; }
+                            thead { display: table-header-group; }
+                            tfoot { display: table-footer-group; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    <div class="subtitle">列印日期: ${new Date().toLocaleDateString()}</div>
+                    
+                    ${metaInfo.map(info => `<div class="meta-row"><span class="meta-label">${info.label}</span><span>${info.value}</span></div>`).join('')}
+                    
+                    ${totalInfo ? `
+                    <div class="total-section">
+                        <span class="total-label">${totalInfo.label}</span>
+                        <span class="total-value">${totalInfo.value}</span>
+                    </div>` : ''}
+                    
+                    <table>
+                        <thead>
+                            <tr>${tableHeaders.map(h => `<th>${h}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>
+                            ${tableData.map(row => `
+                                <tr>
+                                    ${row.map((cell, i) => {
+                                        let className = '';
+                                        if (i === 0 || i === 1) className = 'text-center'; // Date and ID usually center
+                                        else if (i === 4 && row.length === 6 && (String(cell).includes('%') || String(cell).includes('$'))) className = 'text-center'; // Ratio
+                                        else if (i >= row.length - 1 || i === 3) className = 'text-right money'; // Last column and Amount is money
+                                        return `<td class="${className}">${cell}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    
+                    <div class="signatures">
+                        ${signatures.map(s => `<div class="sign-box">${s}</div>`).join('')}
+                    </div>
+                    
+                    <script>
+                        // 自動列印
+                        window.onload = () => { setTimeout(() => window.print(), 500); }
+                    <\/script>
+                </body>
+                </html>
+            `;
+            printWindow.document.write(html);
+            printWindow.document.close();
+        };
+
+        // --- Utility Functions ---
+        const loadXLSX = () => {
+            return new Promise((resolve) => {
+                if (window.XLSX) { resolve(window.XLSX); return; }
+                const check = setInterval(() => {
+                    if (window.XLSX) { clearInterval(check); resolve(window.XLSX); }
+                }, 100);
+            });
+        };
+
+        const formatExcelDate = (input) => {
+            if (!input) return '';
+            if (input instanceof Date) {
+                if (isNaN(input.getTime())) return '';
+                const year = input.getFullYear();
+                const month = String(input.getMonth() + 1).padStart(2, '0');
+                const day = String(input.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            if (typeof input === 'number') {
+                const date = new Date(Math.round((input - 25569) * 86400 * 1000));
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            if (typeof input === 'string') {
+                const cleanInput = input.trim();
+                const date = new Date(cleanInput);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                }
+                return input;
+            }
+            return '';
+        };
+
+        const getFuzzyValue = (row, ...candidates) => {
+            const keys = Object.keys(row);
+            for (const candidate of candidates) {
+                if (row[candidate] !== undefined) return row[candidate];
+                const trimKey = keys.find(k => k.trim() === candidate);
+                if (trimKey && row[trimKey] !== undefined) return row[trimKey];
+                const fuzzyKey = keys.find(k => k.includes(candidate));
+                if (fuzzyKey && row[fuzzyKey] !== undefined) return row[fuzzyKey];
+            }
+            return ''; 
+        };
+
+        // --- Login Component ---
+        const Login = ({ onLogin }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                // Hardcoded credentials as requested
+                if (email === 'artemis19981025@gmail.com' && password === 'artemis19981025') {
+                    onLogin();
+                } else {
+                    setError('帳號或密碼錯誤');
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
+                    <div className="bg-white p-10 rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
+                        <div className="text-center mb-8">
+                            <span className="text-5xl mb-4 block">🔒</span>
+                            <h2 className="text-2xl font-bold text-gray-800">Dolo ERP 系統登入</h2>
+                            <p className="text-gray-500 mt-2 text-sm">請輸入授權帳號密碼以存取系統</p>
+                        </div>
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">帳號 (Email)</label>
+                                <input 
+                                    type="email" 
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                    placeholder="name@example.com"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">密碼</label>
+                                <input 
+                                    type="password" 
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                                    placeholder="••••••••"
+                                    required
+                                />
+                            </div>
+                            {error && <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded border border-red-100 animate-pulse">{error}</div>}
+                            <button 
+                                type="submit" 
+                                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            >
+                                登入系統
+                            </button>
+                        </form>
+                        <div className="mt-6 text-center text-xs text-gray-400">
+                            &copy; Dolo ERP System. All rights reserved.
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Components ---
+
+        const Sidebar = ({ currentView, setCurrentView, isCollapsed, setIsCollapsed }) => {
+            const menuItems = [
+                { id: 'process', label: '派工結算流程', icon: '📋' },
+                { id: 'task_management', label: '本批任務管理', icon: '📄' },
+                { id: 'department_management', label: '本批部門報表', icon: '🏢' },
+                { id: 'shareholder_management', label: '股東管理', icon: '👥' },
+                { id: 'settings_sales', label: '業務單位管理', icon: '💼' },
+                { id: 'settings_construction', label: '施工單位管理', icon: '👷' },
+            ];
+
+            return (
+                <div className="sidebar-container bg-gray-900 text-white transition-all duration-300 flex flex-col h-screen fixed left-0 top-0 z-50 shadow-xl print:hidden" style={{ width: isCollapsed ? '5rem' : '16rem' }}>
+                    <div className="h-16 flex items-center justify-center border-b border-gray-800 bg-gray-900">
+                        {isCollapsed ? <span className="text-2xl">🗄️</span> : 
+                            <div className="flex items-center px-4"><span className="text-2xl mr-2">🗄️</span><span className="font-bold text-lg tracking-wider">Dolo ERP系統</span></div>}
+                    </div>
+                    <div className="flex-1 py-6 space-y-2 overflow-y-auto">
+                        {menuItems.map(item => (
+                            <button key={item.id} onClick={() => setCurrentView(item.id)} className={`w-full flex items-center px-6 py-3 transition-colors relative group ${currentView === item.id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
+                                <span className={`text-xl ${isCollapsed ? 'mx-auto' : 'mr-3'}`}>{item.icon}</span>
+                                {!isCollapsed && <span className="text-sm font-medium whitespace-nowrap">{item.label}</span>}
+                                {isCollapsed && <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-xs rounded opacity-0 group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">{item.label}</div>}
+                            </button>
+                        ))}
+                    </div>
+                    <button onClick={() => setIsCollapsed(!isCollapsed)} className="h-12 border-t border-gray-800 flex items-center justify-center hover:bg-gray-800 transition-colors">
+                        {isCollapsed ? <span>▶️</span> : <span>◀️</span>}
+                    </button>
+                </div>
+            );
+        };
+
+        const DepartmentManager = ({ currentData }) => {
+            const [selectedReportItem, setSelectedReportItem] = useState(null);
+            const reportData = currentData || [];
+
+            const calculateStats = (dept) => {
+                const ratioDecimal = BONUS_RATIOS[dept.key] || (dept.ratio / 100);
+                const totalBonus = reportData.filter(r => r.selected).reduce((acc, job) => {
+                    const turnover = job.financials?.turnover || 0;
+                    return acc + Math.round(turnover * ratioDecimal);
+                }, 0);
+                return { total: totalBonus, count: reportData.filter(r => r.selected).length, jobs: reportData.filter(r => r.selected) };
+            };
+
+            const handlePrintReport = (dept, stats) => {
+                // 準備列印資料
+                const title = "dolo ERP系統 - 部門分紅報表";
+                const metaInfo = [
+                    { label: "部門名稱：", value: dept.name },
+                    { label: "分紅比例：", value: `${dept.ratio}%` }
+                ];
+                const tableHeaders = ["日期", "任務編號", "任務分類", "該案營業額", "分紅金額"];
+                
+                const tableData = stats.jobs.map(job => {
+                    const turnover = job.financials?.turnover || 0;
+                    const ratioDecimal = BONUS_RATIOS[dept.key] || (dept.ratio / 100);
+                    const bonus = Math.round(turnover * ratioDecimal);
+                    return [
+                        job.date,
+                        job.id,
+                        job.category || job.customerName, // 若無分類則顯示客戶(fallback)
+                        `$${turnover.toLocaleString()}`,
+                        `$${bonus.toLocaleString()}`
+                    ];
+                });
+
+                const totalInfo = { label: "本期應領分紅總額", value: `$${stats.total.toLocaleString()}` };
+                const signatures = ["會計簽章", "部門主管簽章"];
+
+                printReport(title, metaInfo, tableHeaders, tableData, totalInfo, signatures);
+            };
+
+            return (
+                <div className="p-8 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex justify-between items-center mb-8 print:hidden">
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-2">🏢</span>部門分紅管理</h2>
+                        <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">基於當前匯入資料</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
+                        <div className="p-6 border-b bg-gray-50 flex justify-between items-center print:hidden">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center"><span className="mr-2">📊</span>部門分紅預覽報表</h3>
+                            <div className="text-sm text-gray-500">統計範圍：當前匯入且勾選的任務 ({reportData.filter(r => r.selected).length} 筆)</div>
+                        </div>
+                        {reportData.length === 0 ? <div className="p-20 text-center text-gray-500">請先匯入 Excel 資料</div> : (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-white"><tr><th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">部門名稱</th><th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">分紅佔比</th><th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">預計分紅金額</th><th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase print:hidden">明細</th></tr></thead>
+                                    <tbody className="divide-y divide-gray-200">
+                                        {DEPARTMENTS_CONFIG.map(dept => {
+                                            const stats = calculateStats(dept);
+                                            return (
+                                                <tr key={dept.id} className="hover:bg-gray-50">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{dept.name}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{dept.ratio}%</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-600">${stats.total.toLocaleString()}</td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium print:hidden">
+                                                        <button onClick={() => setSelectedReportItem({ ...dept, stats })} className="text-blue-600 hover:text-blue-900 flex items-center justify-center mx-auto mr-2"><span className="mr-1">🔍</span> 預覽</button>
+                                                        <button onClick={() => handlePrintReport(dept, stats)} className="text-gray-600 hover:text-gray-900 flex items-center justify-center mx-auto"><span className="mr-1">🖨️</span> 列印</button>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                    {/* Modal for Quick Preview only, actual print is handled by new window */}
+                    {selectedReportItem && (
+                        <div className="fixed inset-0 z-[200] bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-start mb-8 print:hidden"><h2 className="text-xl font-bold">預覽：{selectedReportItem.name}</h2><button onClick={() => setSelectedReportItem(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">❌</button></div>
+                                <table>
+                                    <thead><tr><th>日期</th><th>任務編號</th><th>任務分類</th><th className="text-right">該案營業額</th><th className="text-right">分紅金額</th></tr></thead>
+                                    <tbody>
+                                        {selectedReportItem.stats.jobs.map(job => (
+                                            <tr key={job.id}>
+                                                <td>{job.date}</td><td>{job.id}</td><td>{job.category}</td>
+                                                <td className="text-right">${(job.financials?.turnover||0).toLocaleString()}</td>
+                                                <td className="text-right font-bold">${Math.round((job.financials?.turnover||0) * (BONUS_RATIOS[selectedReportItem.key] || selectedReportItem.ratio/100)).toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="mt-4 flex justify-end">
+                                    <button onClick={() => handlePrintReport(selectedReportItem, selectedReportItem.stats)} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"><span className="mr-2">🖨️</span> 正式列印</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const GenericManager = ({ title, icon, collectionName, fields, enableBatchImport, currentReportData, localData, setLocalData }) => {
+            const [viewMode, setViewMode] = useState('list');
+            const [data, setData] = useState([]);
+            const [isEditing, setIsEditing] = useState(false);
+            const [isBatchImporting, setIsBatchImporting] = useState(false);
+            const [editId, setEditId] = useState(null);
+            const [formData, setFormData] = useState({});
+            const [batchText, setBatchText] = useState('');
+            const [parsedBatchData, setParsedBatchData] = useState([]);
+            const [selectedReportItem, setSelectedReportItem] = useState(null);
+
+            // 優先使用 localData
+            useEffect(() => {
+                if (localData) {
+                    setData(localData);
+                } else {
+                    setData([]);
+                }
+            }, [localData]);
+
+            const reportData = currentReportData || [];
+
+            const openAdd = () => {
+                const initialData = {};
+                fields.forEach(f => initialData[f.key] = f.defaultValue !== undefined ? f.defaultValue : '');
+                setFormData(initialData); setEditId(null); setIsEditing(true);
+            };
+
+            const openEdit = (item) => {
+                const currentData = {};
+                fields.forEach(f => currentData[f.key] = item[f.key]);
+                setFormData(currentData); setEditId(item.id); setIsEditing(true);
+            };
+
+            const handleSave = async () => {
+                if (!formData[fields[0].key]) { alert('請填寫必填欄位'); return; }
+                
+                const payload = { ...formData, updatedAt: new Date() };
+                
+                if (localData && setLocalData) {
+                    if (editId) {
+                        setLocalData(localData.map(item => item.id === editId ? { ...item, ...payload } : item));
+                    } else {
+                        setLocalData([...localData, { ...payload, id: `temp_${Date.now()}`, createdAt: new Date() }]);
+                    }
+                }
+                setIsEditing(false);
+            };
+
+            const handleDelete = async (id) => { 
+                if (window.confirm('確定要刪除嗎？')) {
+                    if (localData && setLocalData) {
+                        setLocalData(localData.filter(item => item.id !== id));
+                    }
+                }
+            };
+
+            const handleParseBatch = () => {
+                if (!batchText) return;
+                let parsed = [];
+                const regex = /([^\d\s%]+)\s*(\d+)\s*([\d\.]+)%/g;
+                let match;
+                const cleanText = batchText.replace(/投資人|投資股數|分紅百分比|姓名|股數/g, '').trim();
+                while ((match = regex.exec(cleanText)) !== null) {
+                    if (match[1].trim()) parsed.push({ name: match[1].trim(), shares: parseFloat(match[2]), ratio: parseFloat(match[3]), role: '' });
+                }
+                if (parsed.length === 0) {
+                    parsed = batchText.split('\n').filter(l => l.trim() !== '' && !l.includes('投資人')).map(line => {
+                        const parts = line.split(/[\t\s]+/).filter(p => p.trim() !== '');
+                        const name = parts.find(p => isNaN(parseFloat(p)));
+                        const numbers = parts.filter(p => !isNaN(parseFloat(p.replace('%', ''))));
+                        if (name && numbers.length >= 2) return { name, shares: parseFloat(numbers[0]), ratio: parseFloat(numbers[1].replace('%', '')), role: '' };
+                        return null;
+                    }).filter(i => i);
+                }
+                setParsedBatchData(parsed);
+            };
+
+            const saveBatchData = async () => {
+                const newItems = parsedBatchData.map(item => ({ ...item, id: `batch_${Date.now()}_${Math.random()}`, createdAt: new Date() }));
+                if (localData && setLocalData) {
+                    setLocalData([...localData, ...newItems]);
+                    setIsBatchImporting(false); setBatchText(''); setParsedBatchData([]); alert(`成功匯入 ${newItems.length} 筆資料`);
+                }
+            };
+
+            const calculateReportStats = (item) => {
+                let totalIncome = 0;
+                let relatedJobs = [];
+                const activeJobs = reportData.filter(r => r.selected);
+
+                if (collectionName === 'shareholders') {
+                    const globalPool = activeJobs.reduce((acc, job) => acc + Math.round((job.financials?.turnover || 0) * 0.15), 0);
+                    const myDividend = Math.round(globalPool * (parseFloat(item.ratio) / 100));
+                    return { total: myDividend, count: activeJobs.length, label: '應領分紅', jobs: activeJobs };
+                } 
+                if (collectionName === 'sales_units') {
+                    relatedJobs = activeJobs.filter(j => j.salesUnitId === item.id);
+                    totalIncome = relatedJobs.reduce((acc, job) => acc + (job.financials?.salesCost || 0), 0);
+                    return { total: totalIncome, count: relatedJobs.length, label: '業務分潤', jobs: relatedJobs };
+                } 
+                if (collectionName === 'construction_units') {
+                    relatedJobs = activeJobs.filter(j => j.constructionUnitId === item.id);
+                    totalIncome = relatedJobs.reduce((acc, job) => acc + (job.financials?.constructionCost || 0), 0);
+                    return { total: totalIncome, count: relatedJobs.length, label: '施工費用', jobs: relatedJobs };
+                }
+                return { total: 0, count: 0 };
+            };
+
+            const handlePrintReport = (item, stats) => {
+                let title = "dolo ERP系統 - 結算報表";
+                let metaInfo = [{ label: "對象：", value: item.name }];
+                let signatures = ["經手人簽章", "領款人簽章"];
+                let colName = "金額";
+                let isUnitReport = false;
+
+                if (collectionName === 'shareholders') {
+                    title = "dolo ERP系統 - 股東分紅報表";
+                    metaInfo.push({ label: "持股比例：", value: `${item.ratio}%` });
+                    colName = "個人分紅";
+                } else if (collectionName === 'sales_units') {
+                    title = "dolo ERP系統 - 業務分潤報表";
+                    colName = "業務分潤";
+                    isUnitReport = true;
+                } else if (collectionName === 'construction_units') {
+                    title = "dolo ERP系統 - 施工費用報表";
+                    colName = "施工費用";
+                    isUnitReport = true;
+                }
+
+                let tableHeaders = [];
+                if (isUnitReport) {
+                    tableHeaders = ["日期", "任務編號", "任務分類", "總金額", "分紅比例", colName];
+                } else {
+                    tableHeaders = ["日期", "任務編號", "任務分類", "該案營業額", colName];
+                }
+
+                const tableData = stats.jobs.map(job => {
+                    const turnover = job.financials?.turnover || 0;
+                    let value = 0;
+                    
+                    if (collectionName === 'shareholders') {
+                        const pool = Math.round(turnover * BONUS_RATIOS.dividends);
+                        const ratio = parseFloat(item.ratio) || 0;
+                        value = Math.round(pool * (ratio / 100));
+                        return [
+                            job.date,
+                            job.id,
+                            job.category || job.customerName,
+                            `$${turnover.toLocaleString()}`,
+                            `$${value.toLocaleString()}`
+                        ];
+                    } else {
+                        // Units
+                        let ratio = 0;
+                        if (collectionName === 'sales_units') {
+                            value = job.financials?.salesCost;
+                            ratio = job.salesRatio;
+                        } else {
+                            value = job.financials?.constructionCost;
+                            ratio = job.constructionRatio;
+                        }
+                        return [
+                            job.date,
+                            job.id,
+                            job.category || job.customerName,
+                            `$${job.amount.toLocaleString()}`, // Using job.amount (總金額) instead of turnover
+                            `${ratio}%`,
+                            `$${(value || 0).toLocaleString()}`
+                        ];
+                    }
+                });
+
+                const totalInfo = { label: "累計總金額", value: `$${stats.total.toLocaleString()}` };
+                
+                printReport(title, metaInfo, tableHeaders, tableData, totalInfo, signatures);
+            };
+
+            return (
+                <div className="p-8 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex justify-between items-center mb-8 print:hidden">
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-2 text-2xl">{icon}</span>{title}</h2>
+                        <div className="flex space-x-3 bg-gray-100 p-1 rounded-lg">
+                            <button onClick={() => setViewMode('list')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>列表管理</button>
+                            <button onClick={() => setViewMode('report')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${viewMode === 'report' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}>總分紅報表</button>
+                        </div>
+                    </div>
+
+                    {viewMode === 'list' && (
+                        <>
+                            <div className="flex justify-end mb-4 print:hidden">
+                                <div className="flex space-x-3">
+                                    {enableBatchImport && <button onClick={() => setIsBatchImporting(true)} className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md"><span className="mr-2">📂</span> 批次匯入</button>}
+                                    <button onClick={openAdd} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md"><span className="mr-2">➕</span> 新增</button>
+                                </div>
+                            </div>
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden print:hidden">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                    <thead className="bg-gray-50"><tr>{fields.map(f => <th key={f.key} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">{f.label}</th>)}<th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">操作</th></tr></thead>
+                                    <tbody className="bg-white divide-y divide-gray-200">
+                                        {data.map(item => (
+                                            <tr key={item.id} className="hover:bg-gray-50">
+                                                {fields.map(f => <td key={f.key} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{f.type === 'boolean' ? (item[f.key] ? '是' : '否') : item[f.key]}</td>)}
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium"><button onClick={() => openEdit(item)} className="text-indigo-600 hover:text-indigo-900 mr-4">✏️</button><button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-900">🗑️</button></td>
+                                            </tr>
+                                        ))}
+                                        {data.length === 0 && <tr><td colSpan={fields.length + 1} className="px-6 py-10 text-center text-gray-500">尚無資料 (請先匯入 Excel)</td></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    )}
+
+                    {viewMode === 'report' && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[400px]">
+                            <div className="p-6 border-b bg-gray-50 flex justify-between items-center print:hidden"><h3 className="text-lg font-bold text-gray-800 flex items-center"><span className="mr-2">📊</span>本批次結算報表</h3><div className="text-sm text-gray-500">共統計 {reportData.filter(r => r.selected).length} 筆已勾選任務</div></div>
+                            {reportData.length === 0 ? <div className="p-20 text-center text-gray-500">請先匯入 Excel 資料</div> : (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200">
+                                        <thead className="bg-white">
+                                            <tr>
+                                                <th>日期</th>
+                                                <th>任務編號</th>
+                                                <th>任務分類</th>
+                                                {(collectionName === 'sales_units' || collectionName === 'construction_units') ? (
+                                                    <>
+                                                        <th className="text-right">總金額</th>
+                                                        <th className="text-center">分紅比例</th>
+                                                        <th className="text-right">{collectionName === 'sales_units' ? '業務分潤' : '施工費用'}</th>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <th className="text-right">該案營業額</th>
+                                                        <th className="text-right">{collectionName === 'shareholders' ? '個人分紅' : '分紅金額'}</th>
+                                                    </>
+                                                )}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                            {data.map(item => {
+                                                const stats = calculateReportStats(item);
+                                                return (
+                                                    <tr key={item.id} className="hover:bg-gray-50">
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.name}</td>
+                                                        {collectionName === 'shareholders' && <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{item.ratio}%</td>}
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">{stats.label} {collectionName !== 'shareholders' && `(${stats.count} 筆)`}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-bold text-green-600">${stats.total.toLocaleString()}</td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium print:hidden">
+                                                            <button onClick={() => setSelectedReportItem({ ...item, stats })} className="text-blue-600 hover:text-blue-900 flex items-center justify-center mx-auto mr-2"><span className="mr-1">🔍</span> 預覽</button>
+                                                            <button onClick={() => handlePrintReport(item, stats)} className="text-gray-600 hover:text-gray-900 flex items-center justify-center mx-auto"><span className="mr-1">🖨️</span> 列印</button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Preview Modal */}
+                    {selectedReportItem && (
+                        <div className="fixed inset-0 z-[200] bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-start mb-8 print:hidden"><h2 className="text-xl font-bold">預覽：{selectedReportItem.name}</h2><button onClick={() => setSelectedReportItem(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200">❌</button></div>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>日期</th>
+                                            <th>任務編號</th>
+                                            <th>任務分類</th>
+                                            {(collectionName === 'sales_units' || collectionName === 'construction_units') ? (
+                                                <>
+                                                    <th className="text-right">總金額</th>
+                                                    <th className="text-center">分紅比例</th>
+                                                    <th className="text-right">{collectionName === 'sales_units' ? '業務分潤' : '施工費用'}</th>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <th className="text-right">該案營業額</th>
+                                                    <th className="text-right">{collectionName === 'shareholders' ? '個人分紅' : '分紅金額'}</th>
+                                                </>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedReportItem.stats.jobs.map(job => {
+                                            const turnover = job.financials?.turnover || 0;
+                                            const isUnit = collectionName === 'sales_units' || collectionName === 'construction_units';
+                                            let value = 0;
+                                            let ratio = 0;
+
+                                            if (collectionName === 'shareholders') {
+                                                const pool = Math.round(turnover * BONUS_RATIOS.dividends);
+                                                const r = parseFloat(selectedReportItem.ratio) || 0;
+                                                value = Math.round(pool * (r / 100));
+                                            } else if (collectionName === 'sales_units') {
+                                                value = job.financials?.salesCost;
+                                                ratio = job.salesRatio;
+                                            } else {
+                                                value = job.financials?.constructionCost;
+                                                ratio = job.constructionRatio;
+                                            }
+                                            
+                                            return (
+                                                <tr key={job.id}>
+                                                    <td>{job.date}</td><td>{job.id}</td><td>{job.category || job.customerName}</td>
+                                                    
+                                                    {isUnit ? (
+                                                        <>
+                                                            <td className="text-right">${job.amount.toLocaleString()}</td>
+                                                            <td className="text-center">{ratio}%</td>
+                                                            <td className="text-right font-bold">${(value||0).toLocaleString()}</td>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <td className="text-right">${turnover.toLocaleString()}</td>
+                                                            <td className="text-right font-bold">${(value||0).toLocaleString()}</td>
+                                                        </>
+                                                    )}
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                                <div className="mt-4 flex justify-end">
+                                    <button onClick={() => handlePrintReport(selectedReportItem, selectedReportItem.stats)} className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"><span className="mr-2">🖨️</span> 正式列印</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isEditing && (
+                        <div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 print:hidden">
+                            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+                                <h3 className="text-lg font-medium text-gray-900 mb-4">{editId ? '編輯' : '新增'}</h3>
+                                <div className="space-y-4">
+                                    {fields.map(f => (
+                                        <div key={f.key}><label className="block text-sm font-medium text-gray-700">{f.label} {f.required && <span className="text-red-500">*</span>}</label>
+                                            {f.type === 'boolean' ? (<div className="mt-1 flex items-center"><input type="checkbox" checked={formData[f.key] || false} onChange={e => setFormData({...formData, [f.key]: e.target.checked})} className="h-4 w-4 text-blue-600 rounded"/><span className="ml-2 text-sm text-gray-500">勾選代表「是」</span></div>) : (<input type={f.type || 'text'} value={formData[f.key] !== undefined ? formData[f.key] : ''} onChange={e => setFormData({...formData, [f.key]: e.target.value})} placeholder={f.placeholder} className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 sm:text-sm"/>)}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="mt-6 flex justify-end space-x-3"><button onClick={() => setIsEditing(false)} className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100">取消</button><button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">儲存</button></div>
+                            </div>
+                        </div>
+                    )}
+
+                    {isBatchImporting && (
+                        <div className="fixed inset-0 z-[200] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 print:hidden">
+                            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 h-3/4 flex flex-col relative">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-lg font-bold text-gray-900">批次匯入股東</h3>
+                                    <button onClick={() => setIsBatchImporting(false)}>❌</button>
+                                </div>
+                                <div className="mb-4 bg-blue-50 p-3 rounded text-sm text-blue-800">支援格式：Excel 表格複製、或文字貼上 (如：簡孝軒610.0%...)。<br/>系統將自動過濾「投資人、投資股數」等標題字眼。</div>
+                                <textarea className="w-full flex-1 border rounded p-2 font-mono text-sm mb-4" placeholder="請在此貼上..." value={batchText} onChange={e => setBatchText(e.target.value)}/>
+                                <div className="flex justify-end space-x-2 mb-4"><button onClick={handleParseBatch} className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900">解析內容</button></div>
+                                {parsedBatchData.length > 0 && (
+                                    <div className="flex-1 overflow-auto border rounded mb-4">
+                                        <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                            <thead className="bg-gray-50 sticky top-0"><tr><th className="px-4 py-2 text-left">姓名</th><th className="px-4 py-2 text-right">股數</th><th className="px-4 py-2 text-right">%</th></tr></thead>
+                                            <tbody className="divide-y divide-gray-200">{parsedBatchData.map((row, i) => (<tr key={i}><td className="px-4 py-2">{row.name}</td><td className="px-4 py-2 text-right">{row.shares}</td><td className="px-4 py-2 text-right">{row.ratio}%</td></tr>))}</tbody>
+                                        </table>
+                                    </div>
+                                )}
+                                <div className="flex justify-end space-x-3 border-t pt-4"><button onClick={() => setIsBatchImporting(false)} className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-100">取消</button><button onClick={saveBatchData} disabled={parsedBatchData.length === 0} className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50">確認匯入</button></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const TaskManager = ({ constructionUnits, salesUnits, tasks, setTasks }) => {
+            const [isEditing, setIsEditing] = useState(false);
+            const [currentTask, setCurrentTask] = useState(null);
+
+            const handleEdit = (task) => { setCurrentTask({ ...task }); setIsEditing(true); };
+            
+            const recalculateTaskFinancials = (task) => {
+                const amount = Number(task.amount);
+                const cUnit = constructionUnits.find(u => u.id === task.constructionUnitId) || { name: task.constructionUnitName }; 
+                const sUnit = salesUnits.find(u => u.id === task.salesUnitId) || { name: task.salesUnitName };
+                let salesCost = (sUnit.name === 'dolo團隊') ? 0 : Math.round(amount * (task.salesRatio / 100));
+                let constructionCost = (cUnit.name === 'dolo團隊') ? Math.round(amount * 0.40) : Math.round(amount * (task.constructionRatio / 100));
+                const turnover = amount - salesCost - constructionCost;
+                return { salesCost, constructionCost, turnover, isDoloConstruction: cUnit.name === 'dolo團隊', deptBonus: Math.round(turnover * BONUS_RATIOS.dept), companyFunds: Math.round(turnover * BONUS_RATIOS.company) };
+            };
+
+            const handleSave = () => {
+                if (!currentTask) return;
+                const newFinancials = recalculateTaskFinancials(currentTask);
+                const updatedTasks = tasks.map(t => t.id === currentTask.id ? { ...t, ...currentTask, financials: newFinancials, amount: Number(currentTask.amount) } : t);
+                setTasks(updatedTasks);
+                setIsEditing(false);
+            };
+
+            const handleDelete = (id) => { 
+                if (confirm('確定要從列表中移除此項目嗎？')) {
+                    const updatedTasks = tasks.filter(t => t.id !== id);
+                    setTasks(updatedTasks);
+                }
+            };
+            
+            // Helper to determine status color
+            const getStatusColor = (status) => {
+                const s = String(status || '');
+                if (s.includes('結案') || s.includes('完成')) return 'bg-green-100 text-green-800';
+                if (s.includes('進行') || s.includes('處理')) return 'bg-yellow-100 text-yellow-800';
+                if (s.includes('取消')) return 'bg-red-100 text-red-800';
+                return 'bg-gray-100 text-gray-800';
+            };
+
+            return (
+                <div className="p-8 animate-in fade-in">
+                    <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-2">📄</span>任務管理 (本批次)</h2><span className="text-sm text-gray-500">共 {tasks.length} 筆</span></div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-4 py-3 text-left font-medium text-gray-500">日期</th><th className="px-4 py-3 text-left font-medium text-gray-500">狀態</th><th className="px-4 py-3 text-left font-medium text-gray-500">任務分類/內容</th><th className="px-4 py-3 text-right font-medium text-gray-500">總金額</th><th className="px-4 py-3 text-right font-medium text-blue-600">營業額</th><th className="px-4 py-3 text-right font-medium text-gray-500">操作</th></tr></thead><tbody className="divide-y divide-gray-200">{tasks.map(task => (<tr key={task.id} className="hover:bg-gray-50"><td className="px-4 py-3 text-gray-500">{task.date}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs ${getStatusColor(task.status)}`}>{task.status || '未標示'}</span></td><td className="px-4 py-3"><div className="font-medium text-gray-900">{task.category || task.customerName}</div><div className="text-xs text-gray-500 truncate max-w-xs">{task.content}</div></td><td className="px-4 py-3 text-right">${task.amount?.toLocaleString()}</td><td className="px-4 py-3 text-right font-bold text-blue-600">${task.financials?.turnover?.toLocaleString() || 0}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEdit(task)} className="text-indigo-600 hover:text-indigo-900 mr-3 p-1">✏️</button><button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-900 p-1">🗑️</button></td></tr>))}{tasks.length === 0 && <tr><td colSpan="7" className="text-center py-10 text-gray-500">尚未匯入資料，請至「派工結算流程」上傳檔案。</td></tr>}</tbody></table></div></div>
+                    {isEditing && currentTask && (<div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"><h3 className="text-lg font-bold mb-4">編輯任務資料</h3><div className="space-y-4"><div><label className="text-sm">客戶名稱/分類</label><input className="w-full border rounded p-2" value={currentTask.customerName || ''} onChange={e => setCurrentTask({...currentTask, customerName: e.target.value})}/></div><div><label className="text-sm">總金額</label><input type="number" className="w-full border rounded p-2" value={currentTask.amount || 0} onChange={e => setCurrentTask({...currentTask, amount: Number(e.target.value)})}/></div><div className="bg-yellow-50 p-3 rounded-md text-xs text-yellow-800"><span className="mr-1">⚠️</span>系統將依據此新金額，自動重新計算該筆任務的營業額與分紅(依據存檔時的比例)。</div></div><div className="mt-6 flex justify-end space-x-3"><button onClick={() => setIsEditing(false)} className="px-4 py-2 border rounded">取消</button><button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded">儲存</button></div></div></div>)}
+                </div>
+            );
+        };
+
+        function App() {
+            const [user, setUser] = useState(null); // Add back user state for login
+            const [isLoggedIn, setIsLoggedIn] = useState(false); // Add login state
+            const [currentView, setCurrentView] = useState('process'); 
+            const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+            const [step, setStep] = useState(1);
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [libReady, setLibReady] = useState(false);
+            const [mergedData, setMergedData] = useState([]);
+            const [fileName, setFileName] = useState('');
+            const [imgProcessing, setImgProcessing] = useState(false);
+            
+            // 單位狀態改為 Local State，初始只有 dolo團隊
+            const [constructionUnits, setConstructionUnits] = useState([
+                { id: 'default_hq', name: 'dolo團隊', isInternal: true, defaultRatio: 40, isDefaultHQ: true }
+            ]);
+            const [salesUnits, setSalesUnits] = useState([
+                { id: 'default_hq', name: 'dolo團隊', isInternal: true, defaultRatio: 0, isDefaultHQ: true }
+            ]);
+            
+            const [shareholders, setShareholders] = useState([]);
+            const [viewingShareholderDetail, setViewingShareholderDetail] = useState(null); 
+
+            // 規則 3: 刷新時強制歸零 (雖然 useState 預設就是這樣，但明確寫出來)
+            useEffect(() => {
+                setMergedData([]);
+                setStep(1);
+                setFileName('');
+            }, []);
+
+            useEffect(() => {
+                const init = async () => {
+                    try { await loadXLSX(); setLibReady(true); } catch (e) { setError('無法載入 Excel 解析元件，請重新整理頁面。'); }
+                };
+                init();
+            }, []);
+
+            const handleFileUpload = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setLoading(true); setError(''); setFileName(file.name);
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const data = new Uint8Array(event.target.result);
+                        const workbook = window.XLSX.read(data, { type: 'array', cellDates: true }); 
+                        if (workbook.SheetNames.length < 2) throw new Error('Excel 檔案至少需包含兩個工作表');
+                        const taskList = window.XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { defval: '' });
+                        const reportList = window.XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[1]], { defval: '' });
+                        await processAndMergeData(taskList, reportList);
+                    } catch (err) { console.error(err); setError(err.message || '檔案解析失敗'); setLoading(false); }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+
+            const processAndMergeData = async (taskList, reportList) => {
+                const merged = [];
+                const reportMap = new Map();
+                reportList.forEach(row => { const id = getFuzzyValue(row, '任務編號'); if (id) reportMap.set(String(id).trim(), row); });
+
+                let currentCUnits = [...constructionUnits];
+                let currentSUnits = [...salesUnits];
+                
+                const resolveUnit = (name, type) => {
+                    const cleanName = (name || '').trim();
+                    if (!cleanName || cleanName === 'dolo團隊' || cleanName === '總部') {
+                        return { id: 'default_hq', ratio: type === 'c' ? 40 : 0 };
+                    }
+                    
+                    let list = type === 'c' ? currentCUnits : currentSUnits;
+                    let existing = list.find(u => u.name === cleanName);
+                    
+                    if (existing) {
+                        return { id: existing.id, ratio: existing.defaultRatio };
+                    }
+                    
+                    const newId = `temp_${type}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+                    const defaultRatio = type === 'c' ? 60 : 10; 
+                    const newUnit = { 
+                        id: newId, 
+                        name: cleanName, 
+                        defaultRatio: defaultRatio, 
+                        isInternal: false,
+                        phone: '', 
+                        createdAt: new Date()
+                    };
+                    
+                    if (type === 'c') currentCUnits.push(newUnit);
+                    else currentSUnits.push(newUnit);
+                    
+                    return { id: newId, ratio: defaultRatio };
+                };
+
+                taskList.forEach(task => {
+                    const taskId = String(getFuzzyValue(task, '任務編號')).trim();
+                    if (!taskId) return;
+                    const report = reportMap.get(taskId) || {};
+                    let rawAmount = getFuzzyValue(report, '實際收款金額', '實收金額') || '0';
+                    if (typeof rawAmount === 'string') rawAmount = rawAmount.replace(/,/g, '');
+                    const amount = parseFloat(rawAmount) || 0;
+                    const isSelected = amount > 500;
+                    const finalDate = formatExcelDate(getFuzzyValue(report, '任務結案日期', '結案日期')) || formatExcelDate(getFuzzyValue(task, '任務結案日期')) || '';
+                    
+                    const creator = getFuzzyValue(report, '任務建立人') || getFuzzyValue(task, '任務建立人');
+                    const closer = getFuzzyValue(report, '任務結案人') || getFuzzyValue(task, '任務結案人');
+
+                    const cUnitData = resolveUnit(closer, 'c');
+                    const sUnitData = resolveUnit(creator, 's');
+
+                    merged.push({
+                        id: taskId, customerId: getFuzzyValue(task, '客戶編號'), customerName: getFuzzyValue(task, '客戶名稱') || getFuzzyValue(task, '客戶') || '',
+                        location: getFuzzyValue(task, '任務地點'), content: getFuzzyValue(task, '任務內容'), 
+                        status: getFuzzyValue(task, '任務狀態') || '', 
+                        processStatus: getFuzzyValue(task, '處理狀態'),
+                        date: finalDate, responder: getFuzzyValue(report, '回覆人'), 
+                        creator: creator, 
+                        closer: closer,
+                        category: getFuzzyValue(report, '任務分類') || getFuzzyValue(task, '任務分類') || '', amount: amount, 
+                        
+                        constructionUnitId: cUnitData.id, 
+                        salesUnitId: sUnitData.id,
+                        constructionRatio: cUnitData.ratio, 
+                        salesRatio: sUnitData.ratio,
+                        
+                        isDuplicate: false, selected: isSelected, financials: { turnover: 0, salesCost: 0, constructionCost: 0 }
+                    });
+                });
+                
+                merged.sort((a, b) => {
+                    const da = a.date ? new Date(a.date).getTime() : 0;
+                    const db = b.date ? new Date(b.date).getTime() : 0;
+                    return db - da;
+                });
+
+                setConstructionUnits(currentCUnits);
+                setSalesUnits(currentSUnits);
+                
+                setMergedData(merged);
+                setLoading(false); setStep(2);
+            };
+
+            const updateRowData = (index, field, value) => {
+                const newData = [...mergedData]; const row = newData[index]; row[field] = value;
+                if (field === 'salesUnitId') {
+                    const selectedUnit = salesUnits.find(u => u.id === value);
+                    if (selectedUnit) row.salesRatio = (selectedUnit.name === 'dolo團隊') ? 0 : (parseFloat(selectedUnit.defaultRatio) || 0);
+                }
+                if (field === 'constructionUnitId') {
+                    const selectedUnit = constructionUnits.find(u => u.id === value);
+                    if (selectedUnit) row.constructionRatio = (selectedUnit.name === 'dolo團隊') ? 40 : (parseFloat(selectedUnit.defaultRatio) || 0);
+                }
+                setMergedData(newData);
+            };
+
+            const calculateFinancials = (row) => {
+                const amount = row.amount;
+                const cUnit = constructionUnits.find(u => u.id === row.constructionUnitId) || constructionUnits[0] || {};
+                const sUnit = salesUnits.find(u => u.id === row.salesUnitId) || salesUnits[0] || {};
+                let salesCost = (sUnit.name === 'dolo團隊') ? 0 : Math.round(amount * (row.salesRatio / 100));
+                let constructionCost = (cUnit.name === 'dolo團隊') ? Math.round(amount * 0.40) : Math.round(amount * (row.constructionRatio / 100));
+                const turnover = amount - salesCost - constructionCost;
+                return { salesCost, constructionCost, turnover, isDoloConstruction: cUnit.name === 'dolo團隊', deptBonus: Math.round(turnover * BONUS_RATIOS.dept), companyFunds: Math.round(turnover * BONUS_RATIOS.company) };
+            };
+
+            const saveToDatabase = async () => {
+                setLoading(true);
+                setTimeout(() => {
+                    setLoading(false);
+                    setStep(6); 
+                }, 500);
+            };
+
+            const generateReportImage = async (title, metaInfo, tableHeaders, tableData, totalInfo, signatures) => {
+                const container = document.createElement('div');
+                container.style.position = 'absolute';
+                container.style.top = '-9999px';
+                container.style.left = '0';
+                container.style.width = '794px'; // A4 width at 96 DPI
+                container.style.backgroundColor = 'white';
+                container.style.padding = '40px';
+                container.style.fontFamily = '"Microsoft JhengHei", "Noto Sans TC", sans-serif';
+                container.style.color = 'black';
+                
+                // Helper for table rows
+                const rowsHtml = tableData.map(row => `
+                    <tr>
+                        ${row.map((cell, i) => `<td style="border: 1px solid #000; padding: 6px; text-align: ${i >= row.length - 2 || (tableHeaders.includes('總金額') && i===3) ? 'right' : (i<=1 || (i===4 && tableHeaders.includes('分紅比例')) ? 'center' : 'left')}; font-family: ${i >= row.length - 1 ? '"Courier New", monospace' : 'inherit'}; font-weight: ${i === row.length - 1 ? 'bold' : 'normal'};">${cell}</td>`).join('')}
+                    </tr>
+                `).join('');
+
+                container.innerHTML = `
+                    <h1 style="text-align: center; font-size: 24px; font-weight: bold; margin-bottom: 5px;">${title}</h1>
+                    <div style="text-align: center; font-size: 14px; color: #555; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #000;">列印日期: ${new Date().toLocaleDateString()}</div>
+                    
+                    ${metaInfo.map(info => `<div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 16px;"><span style="font-weight: bold;">${info.label}</span><span>${info.value}</span></div>`).join('')}
+                    
+                    ${totalInfo ? `<div style="border: 2px solid #000; padding: 10px 15px; margin: 15px 0; display: flex; justify-content: space-between; align-items: center; background-color: white;"><span style="font-weight: bold; font-size: 18px;">${totalInfo.label}</span><span style="font-weight: 900; font-size: 20px; font-family: 'Courier New', monospace;">${totalInfo.value}</span></div>` : ''}
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px;">
+                        <thead>
+                            <tr>${tableHeaders.map(h => `<th style="border: 1px solid #000; padding: 6px; background-color: #eee; font-weight: bold; text-align: center;">${h}</th>`).join('')}</tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    
+                    <div style="display: flex; justify-content: space-between; margin-top: 50px;">
+                        ${signatures.map(s => `<div style="width: 200px; border-top: 1px solid #000; padding-top: 10px; text-align: center; font-size: 16px;">${s}</div>`).join('')}
+                    </div>
+                `;
+
+                document.body.appendChild(container);
+                try {
+                    const canvas = await html2canvas(container, { scale: 2 }); // 2x scale for better quality
+                    document.body.removeChild(container);
+                    return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+                } catch (e) {
+                    console.error("Image generation failed", e);
+                    if(document.body.contains(container)) document.body.removeChild(container);
+                    return null;
+                }
+            };
+
+            const handleDownloadAllImages = async () => {
+                if (!window.JSZip || !window.saveAs || !window.html2canvas) {
+                    alert("必要元件載入中，請稍後再試");
+                    return;
+                }
+                
+                if (!confirm("即將產生所有報表圖檔，這可能需要幾秒鐘的時間。確定繼續嗎？")) return;
+
+                setImgProcessing(true);
+                const zip = new JSZip();
+                const folder = zip.folder("報表圖檔");
+                const activeData = mergedData.filter(r => r.selected);
+
+                // 1. 部門報表
+                for (const dept of DEPARTMENTS_CONFIG) {
+                    const ratioDecimal = BONUS_RATIOS[dept.key] || (dept.ratio / 100);
+                    const deptJobs = activeData; // 全域計算
+                    const totalBonus = deptJobs.reduce((acc, job) => {
+                        const turnover = calculateFinancials(job).turnover;
+                        return acc + Math.round(turnover * ratioDecimal);
+                    }, 0);
+
+                    const tableData = deptJobs.map(job => {
+                        const financials = calculateFinancials(job);
+                        const bonus = Math.round(financials.turnover * ratioDecimal);
+                        return [job.date, job.id, job.category || job.customerName, `$${financials.turnover.toLocaleString()}`, `$${bonus.toLocaleString()}`];
+                    });
+
+                    const blob = await generateReportImage(
+                        "dolo ERP系統 - 部門分紅報表",
+                        [{ label: "部門名稱：", value: dept.name }, { label: "分紅比例：", value: `${dept.ratio}%` }],
+                        ["日期", "任務編號", "任務分類", "該案營業額", "分紅金額"],
+                        tableData,
+                        { label: "本期應領分紅總額", value: `$${totalBonus.toLocaleString()}` },
+                        ["會計簽章", "部門主管簽章"]
+                    );
+                    if (blob) folder.file(`部門_${dept.name}.jpg`, blob);
+                }
+
+                // 2. 股東報表
+                const globalPool = activeData.reduce((acc, job) => acc + (calculateFinancials(job).turnover * BONUS_RATIOS.dividends), 0);
+                for (const s of shareholders) {
+                    const ratio = parseFloat(s.ratio) || 0;
+                    const myTotal = Math.round(globalPool * (ratio / 100));
+                    
+                    const tableData = activeData.map(job => {
+                        const financials = calculateFinancials(job);
+                        const pool = Math.round(financials.turnover * BONUS_RATIOS.dividends);
+                        const share = Math.round(pool * (ratio / 100));
+                        return [job.date, job.id, job.category || job.customerName, `$${financials.turnover.toLocaleString()}`, `$${share.toLocaleString()}`];
+                    });
+
+                    const blob = await generateReportImage(
+                        "dolo ERP系統 - 股東分紅報表",
+                        [{ label: "股東姓名：", value: s.name }, { label: "持股比例：", value: `${ratio}%` }],
+                        ["日期", "任務編號", "任務分類", "該案營業額", "個人分紅"],
+                        tableData,
+                        { label: "本期應領分紅總額", value: `$${myTotal.toLocaleString()}` },
+                        ["經手人簽章", "領款人簽章"]
+                    );
+                    if (blob) folder.file(`股東_${s.name}.jpg`, blob);
+                }
+
+                // 3. 業務單位報表 (只產出有金額的)
+                for (const u of salesUnits) {
+                    const relatedJobs = activeData.filter(j => j.salesUnitId === u.id);
+                    if (relatedJobs.length === 0) continue;
+                    
+                    const totalIncome = relatedJobs.reduce((acc, job) => acc + calculateFinancials(job).salesCost, 0);
+                    const tableData = relatedJobs.map(job => {
+                        const financials = calculateFinancials(job);
+                        // Modified: sales report headers
+                        return [
+                            job.date, 
+                            job.id, 
+                            job.category || job.customerName, 
+                            `$${job.amount.toLocaleString()}`, // Total Amount
+                            `${job.salesRatio}%`, 
+                            `$${financials.salesCost.toLocaleString()}`
+                        ];
+                    });
+
+                    const blob = await generateReportImage(
+                        "dolo ERP系統 - 業務分潤報表",
+                        [{ label: "單位名稱：", value: u.name }],
+                        ["日期", "任務編號", "任務分類", "總金額", "分紅比例", "業務分潤"], // Updated header
+                        tableData,
+                        { label: "本期應領分潤總額", value: `$${totalIncome.toLocaleString()}` },
+                        ["經手人簽章", "領款人簽章"]
+                    );
+                    if (blob) folder.file(`業務_${u.name}.jpg`, blob);
+                }
+
+                // 4. 施工單位報表 (只產出有金額的)
+                for (const u of constructionUnits) {
+                    const relatedJobs = activeData.filter(j => j.constructionUnitId === u.id);
+                    if (relatedJobs.length === 0) continue;
+                    
+                    const totalIncome = relatedJobs.reduce((acc, job) => acc + calculateFinancials(job).constructionCost, 0);
+                    const tableData = relatedJobs.map(job => {
+                        const financials = calculateFinancials(job);
+                        // Modified: construction report headers
+                        return [
+                            job.date, 
+                            job.id, 
+                            job.category || job.customerName, 
+                            `$${job.amount.toLocaleString()}`, // Total Amount
+                            `${job.constructionRatio}%`, 
+                            `$${financials.constructionCost.toLocaleString()}`
+                        ];
+                    });
+
+                    const blob = await generateReportImage(
+                        "dolo ERP系統 - 施工費用報表",
+                        [{ label: "單位名稱：", value: u.name }],
+                        ["日期", "任務編號", "任務分類", "總金額", "分紅比例", "施工費用"], // Updated header
+                        tableData,
+                        { label: "本期應領費用總額", value: `$${totalIncome.toLocaleString()}` },
+                        ["經手人簽章", "領款人簽章"]
+                    );
+                    if (blob) folder.file(`施工_${u.name}.jpg`, blob);
+                }
+
+                zip.generateAsync({type:"blob"}).then(function(content) {
+                    saveAs(content, `dolo_all_reports_images_${new Date().toISOString().slice(0,10)}.zip`);
+                    setImgProcessing(false);
+                });
+            };
+
+            const handleBackupZip = () => {
+                if (!window.JSZip || !window.saveAs) {
+                    alert("備份功能載入中，請稍後再試");
+                    return;
+                }
+
+                const zip = new JSZip();
+                
+                // 1. Snapshot JSON (Core restore data)
+                const snapshot = {
+                    version: "1.0.0",
+                    exportedAt: new Date().toISOString(),
+                    sourceFileName: fileName || "unknown",
+                    state: {
+                        mergedData,
+                        salesUnits,
+                        constructionUnits,
+                        shareholders,
+                        step
+                    }
+                };
+                zip.file("snapshot.json", JSON.stringify(snapshot, null, 2));
+
+                // 2. Data Folder (Reports in JSON for future use)
+                const reportFolder = zip.folder("reports");
+                
+                // Shareholders Report
+                const shareholdersReport = shareholders.map(s => {
+                    const pool = Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+(r.financials?.turnover || 0)*BONUS_RATIOS.dividends,0)*0.15);
+                    const ratio = parseFloat(s.ratio) || 0;
+                    return {
+                        name: s.name,
+                        role: s.role,
+                        shares: s.shares,
+                        ratio: `${ratio}%`,
+                        bonus: Math.round(pool * (ratio / 100))
+                    };
+                });
+                reportFolder.file("股東分紅總表.json", JSON.stringify(shareholdersReport, null, 2));
+
+                // Departments Report
+                const deptReport = DEPARTMENTS_CONFIG.map(d => {
+                    const ratioDecimal = BONUS_RATIOS[d.key] || (d.ratio / 100);
+                    const totalBonus = mergedData.filter(r => r.selected).reduce((acc, job) => acc + Math.round((job.financials?.turnover || 0) * ratioDecimal), 0);
+                    return {
+                        name: d.name,
+                        ratio: `${d.ratio}%`,
+                        totalBonus: totalBonus
+                    };
+                });
+                reportFolder.file("部門分紅總表.json", JSON.stringify(deptReport, null, 2));
+
+                // Tasks Data
+                const tasksData = mergedData.filter(r => r.selected).map(t => ({
+                    date: t.date,
+                    id: t.id,
+                    category: t.category,
+                    customer: t.customerName,
+                    amount: t.amount,
+                    turnover: t.financials?.turnover,
+                    salesUnit: salesUnits.find(u => u.id === t.salesUnitId)?.name,
+                    constructionUnit: constructionUnits.find(u => u.id === t.constructionUnitId)?.name
+                }));
+                reportFolder.file("任務清單.json", JSON.stringify(tasksData, null, 2));
+
+                // Generate Zip
+                zip.generateAsync({type:"blob"}).then(function(content) {
+                    saveAs(content, `dolo_backup_${new Date().toISOString().slice(0,10)}.zip`);
+                });
+            };
+
+            const handleRestoreSnapshot = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    let snapshot;
+
+                    // 檢查是否為 ZIP 檔
+                    if (file.name.endsWith('.zip')) {
+                        const zip = await JSZip.loadAsync(file);
+                        const snapshotFile = zip.file("snapshot.json");
+                        if (snapshotFile) {
+                            const text = await snapshotFile.async("string");
+                            snapshot = JSON.parse(text);
+                        } else {
+                            alert("ZIP 檔中找不到 snapshot.json");
+                            return;
+                        }
+                    } else {
+                        // 假設是 JSON 檔
+                        const text = await file.text();
+                        snapshot = JSON.parse(text);
+                    }
+
+                    if (!snapshot.state) { 
+                        alert("不是有效的備份檔");
+                        return;
+                    }
+
+                    const { mergedData, salesUnits, constructionUnits, shareholders, step } = snapshot.state;
+
+                    setMergedData(mergedData || []);
+                    setSalesUnits(salesUnits || []);
+                    setConstructionUnits(constructionUnits || []);
+                    setShareholders(shareholders || []);
+                    setStep(step || 1);
+                    setFileName(snapshot.sourceFileName || "");
+
+                    alert("備份還原完成！");
+                } catch (err) {
+                    console.error(err);
+                    alert("還原失敗，檔案可能損毀或格式錯誤");
+                }
+                // Clear input to allow re-upload
+                e.target.value = '';
+            };
+
+            const dataWithFinancials = mergedData.map(row => ({
+                ...row,
+                financials: calculateFinancials(row)
+            }));
+
+            if (!isLoggedIn) {
+                return <Login onLogin={() => setIsLoggedIn(true)} />;
+            }
+
+            return (
+                <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden">
+                    <Sidebar currentView={currentView} setCurrentView={setCurrentView} isCollapsed={isSidebarCollapsed} setIsCollapsed={setIsSidebarCollapsed} />
+                    <div className={`flex-1 flex flex-col h-screen overflow-hidden ${isSidebarCollapsed ? 'ml-20' : 'ml-64'}`}>
+                        <main className="flex-1 overflow-y-auto bg-gray-50 print:bg-white">
+                            {currentView === 'settings_sales' && <GenericManager title="業務單位管理" icon="💼" collectionName="sales_units" fields={[{ key: 'name', label: '姓名', required: true }, { key: 'phone', label: '電話' }, { key: 'defaultRatio', label: '預設分紅 (%)', type: 'number', defaultValue: 10 }]} localData={salesUnits} setLocalData={setSalesUnits} currentReportData={dataWithFinancials} />}
+                            {currentView === 'settings_construction' && <GenericManager title="施工單位管理" icon="👷" collectionName="construction_units" fields={[{ key: 'name', label: '姓名', required: true }, { key: 'phone', label: '電話' }, { key: 'defaultRatio', label: '預設分紅 (%)', type: 'number', defaultValue: 60 }, { key: 'isInternal', label: '公司內部單位', type: 'boolean', defaultValue: false }]} localData={constructionUnits} setLocalData={setConstructionUnits} currentReportData={dataWithFinancials} />}
+                            {currentView === 'shareholder_management' && <GenericManager title="股東管理" icon="👥" collectionName="shareholders" fields={[{ key: 'name', label: '股東姓名', required: true }, { key: 'role', label: '職稱/角色' }, { key: 'shares', label: '投資股數', type: 'number', required: true }, { key: 'ratio', label: '分紅百分比 (%)', type: 'number', required: true }, { key: 'note', label: '備註' }]} enableBatchImport={true} currentReportData={dataWithFinancials} localData={shareholders} setLocalData={setShareholders} />}
+                            {currentView === 'department_management' && <DepartmentManager currentData={dataWithFinancials} />}
+                            {currentView === 'task_management' && <TaskManager constructionUnits={constructionUnits} salesUnits={salesUnits} tasks={dataWithFinancials} setTasks={setMergedData} />}
+                            
+                            {/* Process Steps (Upload -> ... -> Complete) */}
+                            {currentView === 'process' && (
+                                <div className="max-w-7xl mx-auto px-8 py-8 print:hidden">
+                                    <div className="mb-8"><h1 className="text-3xl font-extrabold text-gray-900">派工結算流程</h1><p className="mt-2 text-gray-500">資料僅暫存於當前頁面，刷新即消失。請記得列印或截圖。</p></div>
+                                    <div className="mb-8"><div className="flex justify-between max-w-4xl mx-auto relative"><div className="absolute top-1/2 w-full h-1 bg-gray-200 -z-10 rounded"></div>{[{id: 1, name: '上傳'}, {id: 2, name: '核對'}, {id: 3, name: '拆帳'}, {id: 4, name: '分配'}, {id: 5, name: '分紅'}].map(s => (<div key={s.id} className={`flex flex-col items-center bg-gray-50 px-3 ${step >= s.id ? 'text-blue-600' : 'text-gray-400'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center border-4 transition-all ${step >= s.id ? 'bg-white border-blue-600' : 'bg-white border-gray-300'}`}><span className="text-xs font-bold">{s.id}</span></div><span className="text-xs font-bold mt-1">{s.name}</span></div>))}</div></div>
+                                    <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 min-h-[500px]">
+                                        {step === 1 && (<div className="space-y-6 animate-in fade-in slide-in-from-bottom-4"><div className="bg-white border-2 border-dashed border-blue-300 rounded-xl p-10 text-center hover:border-blue-500 transition-all shadow-sm group"><div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300"><span className="text-4xl">📊</span></div><h3 className="text-xl font-bold text-gray-800 mb-2">上傳 Excel 派工檔案</h3><div className="flex justify-center gap-4 mt-4"><div className="relative inline-block"><input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} disabled={!libReady || loading} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/><button className="px-8 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center font-medium">{loading ? '處理中...' : '選擇檔案'} {loading && <span className="ml-2 animate-spin">🔄</span>}</button></div>
+                                        <div className="relative inline-block">
+                                            <input type="file" accept=".json, .zip" onChange={handleRestoreSnapshot} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <button className="px-6 py-3 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-700 flex items-center font-medium">
+                                                <span className="mr-2">↩️</span> 匯入備份 (ZIP/JSON)
+                                            </button>
+                                        </div>
+                                        
+                                        <div className="relative inline-block">
+                                            <input type="file" webkitdirectory="" directory="" onChange={handleRestoreSnapshot} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                            <button className="px-6 py-3 bg-gray-600 text-white rounded-lg shadow-md hover:bg-gray-700 flex items-center font-medium">
+                                                <span className="mr-2">📂</span> 選取資料夾
+                                            </button>
+                                        </div></div><p className="text-sm text-gray-500 mt-4">系統將自動讀取 Excel 內容進行計算</p></div>{error && <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center border border-red-100"><span className="mr-3">⚠️</span>{error}</div>}</div>)}
+                                        {step === 2 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-4"><div className="flex justify-between items-center mb-4"><div className="bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg text-sm border border-yellow-200 flex items-center"><span className="mr-2">⚠️</span>預設勾選：金額 &gt; $500 的項目</div><div className="text-sm text-gray-500">共 {mergedData.length} 筆</div></div><div className="overflow-x-auto border rounded-lg"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-3 py-3 w-10">選</th><th className="px-3 py-3 text-left font-medium text-gray-500">日期</th><th className="px-3 py-3">任務編號</th><th className="px-3 py-3">內容</th><th className="px-3 py-3 bg-orange-50 text-orange-800">建立人</th><th className="px-3 py-3 bg-green-50 text-green-800">結案人</th><th className="px-3 py-3 text-right">金額</th><th className="px-3 py-3 w-10">刪</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.map((row, i) => (<tr key={i} className={row.selected ? 'bg-blue-50/30' : ''}><td className="px-3 py-3 text-center"><input type="checkbox" checked={row.selected} onChange={e=>updateRowData(i,'selected',e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600"/></td><td className="px-3 py-3 text-gray-500 font-mono text-xs">{row.date}</td><td className="px-3 py-3"><div className="font-medium text-gray-900">{row.id}</div>{row.isDuplicate && <span className="text-xs text-red-600 bg-red-100 px-1 rounded">重複</span>}</td><td className="px-3 py-3 text-gray-500 truncate max-w-[200px]">{row.content}</td><td className="px-3 py-3 bg-orange-50/20">{row.creator}</td><td className="px-3 py-3 bg-green-50/20">{row.closer}</td><td className="px-3 py-3 text-right font-medium">${row.amount.toLocaleString()}</td><td className="px-3 py-3 text-center"><button onClick={()=>{const n=[...mergedData];n.splice(i,1);setMergedData(n)}} className="text-red-400 hover:text-red-600">🗑️</button></td></tr>))}</tbody></table></div><div className="flex justify-between pt-4"><button onClick={()=>{setStep(1);setMergedData([])}} className="text-gray-500 hover:text-gray-900">重新上傳</button><button onClick={()=>setStep(3)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">下一步</button></div></div>)}
+                                        {step === 3 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-4"><div className="overflow-x-auto overflow-y-visible border rounded-lg"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-3 py-3 text-left w-24">結案日期</th><th className="px-3 py-3 text-left w-28">分類</th><th className="px-3 py-3 text-left w-32">客戶</th><th className="px-3 py-3 text-right">總金額</th><th className="px-3 py-3 text-left w-48">業務單位 (主導)</th><th className="px-3 py-3 text-left w-48">施工單位</th><th className="px-3 py-3 text-right bg-blue-50 text-blue-800">營業額</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.filter(r=>r.selected && !r.isDuplicate).map((row) => { const realIndex = mergedData.findIndex(r => r.id === row.id); const financials = calculateFinancials(row); return (<tr key={row.id}><td className="px-3 py-3 text-gray-500">{row.date}</td><td className="px-3 py-3"><span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{row.category}</span></td><td className="px-3 py-3 font-medium text-gray-700">{row.customerName}</td><td className="px-3 py-3 text-right font-bold text-gray-900">${row.amount.toLocaleString()}</td><td className="px-3 py-3"><select value={row.salesUnitId} onChange={e=>updateRowData(realIndex,'salesUnitId',e.target.value)} className="block w-full border-gray-300 rounded-md text-xs shadow-sm focus:ring-purple-500 focus:border-purple-500 cursor-pointer">{salesUnits.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select><div className="text-xs text-purple-600 mt-1 pl-1">分潤 ({row.salesRatio}%): ${financials.salesCost.toLocaleString()}</div></td><td className="px-3 py-3"><select value={row.constructionUnitId} onChange={e=>updateRowData(realIndex,'constructionUnitId',e.target.value)} className="block w-full border-gray-300 rounded-md text-xs shadow-sm focus:ring-orange-500 focus:border-orange-500 cursor-pointer">{constructionUnits.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select><div className="text-xs text-orange-600 mt-1 pl-1">{financials.isDoloConstruction ? (<span>扣除: ${financials.constructionCost.toLocaleString()} <span className="text-gray-400">(40%)</span></span>) : (<span>扣除: ${financials.constructionCost.toLocaleString()} <span className="text-gray-400">({row.constructionRatio}%)</span></span>)}</div></td><td className="px-3 py-3 text-right bg-blue-50 font-bold text-blue-700">${financials.turnover.toLocaleString()}</td></tr>); })}</tbody><tfoot className="bg-gray-800 text-white"><tr><td colSpan={6} className="px-6 py-4 text-right">本批次總營業額</td><td className="px-6 py-4 text-right text-xl font-bold text-green-400">${mergedData.filter(r=>r.selected && !r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0).toLocaleString()}</td></tr></tfoot></table></div><div className="flex justify-between pt-4"><button onClick={()=>setStep(2)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={()=>setStep(4)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">下一步：查看營收分配</button></div></div>)}
+                                        {step === 4 && (<div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6 rounded-xl flex flex-col items-center">
+                                                    <h3 className="text-lg font-medium text-blue-800 mb-2">本批次總金額</h3>
+                                                    <div className="text-4xl font-extrabold text-blue-600 tracking-tight">${mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+r.amount,0).toLocaleString()}</div>
+                                                </div>
+                                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-6 rounded-xl flex flex-col items-center">
+                                                    <h3 className="text-lg font-medium text-green-800 mb-2">本批次總營業額</h3>
+                                                    <div className="text-4xl font-extrabold text-green-600 tracking-tight">${mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0).toLocaleString()}</div>
+                                                </div>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-white border rounded-xl shadow-sm p-6"><div className="flex items-center justify-between mb-4 border-b pb-2"><h4 className="font-bold text-gray-800 flex items-center"><span className="mr-2">👥</span>部門分紅 (55%)</h4><span className="text-lg font-bold text-blue-600">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.55).toLocaleString()}</span></div><div className="space-y-3 text-sm"><div className="flex justify-between"><span>總營運長 (30%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.30).toLocaleString()}</span></div><div className="flex justify-between"><span>會計行政&業務派工 (10%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.10).toLocaleString()}</span></div><div className="flex justify-between"><span>系統維護&行銷管理 (5%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.05).toLocaleString()}</span></div><div className="flex justify-between"><span>美編設計&社群管理 (5%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.05).toLocaleString()}</span></div><div className="flex justify-between"><span>技術主管 (5%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.05).toLocaleString()}</span></div></div></div><div className="bg-white border rounded-xl shadow-sm p-6"><div className="flex items-center justify-between mb-4 border-b pb-2"><h4 className="font-bold text-gray-800 flex items-center"><span className="mr-2">🥧</span>公司總體資金配置 (45%)</h4><span className="text-lg font-bold text-purple-600">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.45).toLocaleString()}</span></div><div className="space-y-3 text-sm"><div className="flex justify-between"><span>公司營運成本 (25%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.25).toLocaleString()}</span></div><div className="flex justify-between"><span>資金與投資人比例分紅 (15%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.15).toLocaleString()}</span></div><div className="flex justify-between"><span>年度保留金 (5%)</span><span className="font-medium">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.05).toLocaleString()}</span></div></div></div></div><div className="bg-white border rounded-xl shadow-sm overflow-visible"><div className="px-6 py-4 border-b bg-gray-50 flex items-center"><span className="mr-2">📝</span><h4 className="font-bold text-gray-800">本期營收明細表</h4></div><div className="overflow-x-auto overflow-y-visible"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50 relative z-10"><tr><th className="px-6 py-3 text-left font-medium text-gray-500">日期</th><th className="px-6 py-3 text-left font-medium text-gray-500">項目</th><th className="px-6 py-3 text-left font-medium text-gray-500">客戶</th><th className="px-6 py-3 text-right font-medium text-gray-500">總金額</th><th className="px-6 py-3 text-right font-bold text-blue-600">營業額</th><th className="px-6 py-3 text-right font-medium text-green-600 bg-green-50">部門分紅(55%)</th><th className="px-6 py-3 text-right font-medium text-purple-600 bg-purple-50">資金配置(45%)</th></tr></thead><tbody className="divide-y divide-gray-200 relative z-0">{mergedData.filter(r=>r.selected && !r.isDuplicate).map((row, i) => { const financials = calculateFinancials(row); const tooltipPosClass = i < 5 ? "top-full mt-1" : "bottom-full mb-1"; const deptBreakdown = [{ label: '總營運長 (30%)', val: Math.round(financials.turnover * BONUS_RATIOS.coo) }, { label: '會計行政&業務派工 (10%)', val: Math.round(financials.turnover * BONUS_RATIOS.admin) }, { label: '系統維護&行銷管理 (5%)', val: Math.round(financials.turnover * BONUS_RATIOS.marketing) }, { label: '美編設計&社群管理 (5%)', val: Math.round(financials.turnover * BONUS_RATIOS.design) }, { label: '技術主管 (5%)', val: Math.round(financials.turnover * BONUS_RATIOS.tech) }]; const companyBreakdown = [{ label: '公司營運成本 (25%)', val: Math.round(financials.turnover * BONUS_RATIOS.opCost) }, { label: '資金與投資人比例分紅 (15%)', val: Math.round(financials.turnover * BONUS_RATIOS.dividends) }, { label: '年度保留金 (5%)', val: Math.round(financials.turnover * BONUS_RATIOS.reserve) }]; return (<tr key={row.id} className="hover:bg-gray-50 relative"><td className="px-6 py-3 text-gray-500">{row.date}</td><td className="px-6 py-3 text-gray-900">{row.id}</td><td className="px-6 py-3 text-gray-600">{row.customerName}</td><td className="px-6 py-3 text-right text-gray-900">${row.amount.toLocaleString()}</td><td className="px-6 py-3 text-right font-bold text-blue-600">${financials.turnover.toLocaleString()}</td><td className="px-6 py-3 text-right text-green-600 bg-green-50 relative"><div className="group/dept inline-block relative"><div className="font-bold cursor-help border-b border-dotted border-green-400 inline-block relative z-20">${financials.deptBonus.toLocaleString()}</div><div className={`absolute ${tooltipPosClass} left-1/2 -translate-x-1/2 hidden group-hover/dept:block bg-gray-900 text-white text-xs rounded p-3 shadow-xl w-60 text-left z-[999] pointer-events-none`}><div className="font-bold mb-2">部門分紅明細</div><div className="space-y-1">{deptBreakdown.map((d, idx) => (<div key={idx} className="flex justify-between gap-3"><span className="opacity-90">{d.label}</span><span className="font-mono font-bold">${d.val.toLocaleString()}</span></div>))}</div><div className="border-t border-white/20 mt-2 pt-2 flex justify-between"><span className="font-bold">合計</span><span className="font-mono font-bold">${financials.deptBonus.toLocaleString()}</span></div></div></div></td><td className="px-6 py-3 text-right text-purple-600 bg-purple-50 relative"><div className="group/company inline-block relative"><div className="font-bold cursor-help border-b border-dotted border-purple-400 inline-block relative z-20">${financials.companyFunds.toLocaleString()}</div><div className={`absolute ${tooltipPosClass} right-0 hidden group-hover/company:block bg-gray-900 text-white text-xs rounded p-3 shadow-xl w-60 text-left z-[999] pointer-events-none`}><div className="font-bold mb-2">資金配置明細</div><div className="space-y-1">{companyBreakdown.map((d, idx) => (<div key={idx} className="flex justify-between gap-3"><span className="opacity-90">{d.label}</span><span className="font-mono font-bold">${d.val.toLocaleString()}</span></div>))}</div><div className="border-t border-white/20 mt-2 pt-2 flex justify-between"><span className="font-bold">合計</span><span className="font-mono font-bold">${financials.companyFunds.toLocaleString()}</span></div></div></div></td></tr>); })}</tbody><tfoot className="bg-gray-100 font-bold border-t-2 border-gray-300"><tr><td colSpan={5} className="px-6 py-4 text-right">總計</td><td className="px-6 py-4 text-right text-green-700 bg-green-100">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).deptBonus,0)).toLocaleString()}</td><td className="px-6 py-4 text-right text-purple-700 bg-purple-100">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).companyFunds,0)).toLocaleString()}</td></tr></tfoot></table></div></div><div className="flex justify-between pt-6"><button onClick={() => setStep(3)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={() => setStep(5)} className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md flex items-center font-bold">下一步：股東分紅 <span className="ml-2">➡️</span></button></div></div>)}
+                                        {step === 5 && (<div className="space-y-6 animate-in fade-in slide-in-from-bottom-4"><div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 p-6 rounded-xl flex flex-col items-center"><h3 className="text-lg font-medium text-purple-800 mb-2">本次可分紅金額 (資金池 15%)</h3><div className="text-4xl font-extrabold text-purple-600 tracking-tight">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.15).toLocaleString()}</div></div>{shareholders.length === 0 && (<div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4"><div className="flex"><span className="mr-3 text-xl">ℹ️</span><div className="ml-3"><p className="text-sm text-blue-700 font-bold">目前無股東資料，請前往「股東管理」匯入。</p></div></div></div>)}<div className="bg-white border rounded-xl shadow-sm overflow-hidden"><table className="min-w-full divide-y divide-gray-200"><thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left font-medium text-gray-500">股東姓名</th><th className="px-6 py-3 text-left font-medium text-gray-500">職稱</th><th className="px-6 py-3 text-right font-medium text-gray-500">投資股數</th><th className="px-6 py-3 text-right font-medium text-gray-500">分紅佔比</th><th className="px-6 py-3 text-right font-bold text-gray-800">應領分紅</th></tr></thead><tbody className="divide-y divide-gray-200">{shareholders.map(s => { const pool = Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0)*0.15); const ratio = parseFloat(s.ratio) || 0; return (<tr key={s.id} className="hover:bg-gray-50"><td className="px-6 py-4 font-medium text-gray-900"><button onClick={() => setViewingShareholderDetail(s)} className="text-blue-600 hover:text-blue-800 hover:underline flex items-center"><span className="mr-2">👁️</span>{s.name}</button></td><td className="px-6 py-4 text-gray-500">{s.role}</td><td className="px-6 py-4 text-right">{s.shares}</td><td className="px-6 py-4 text-right font-mono text-blue-600">{ratio}%</td><td className="px-6 py-4 text-right font-bold text-green-600">${Math.round(pool * (ratio/100)).toLocaleString()}</td></tr>); })}</tbody></table></div><div className="flex justify-between pt-6"><button onClick={() => setStep(4)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={saveToDatabase} disabled={loading} className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md flex items-center font-bold disabled:opacity-50 disabled:cursor-not-allowed">{loading ? '儲存中...' : '確認結算'} <span className="ml-2">💾</span></button></div></div>)}
+                                        {step === 6 && (<div className="text-center py-20 animate-in zoom-in"><span className="text-6xl mb-4 block">✅</span><h2 className="text-3xl font-bold text-gray-900 mb-2">計算完成！</h2><p className="text-gray-500 mb-8">所有數據已計算完畢。請前往「部門報表」或「股東管理」查看/列印報表。<br/>重新整理頁面後，所有資料將會消失。</p>
+                                        <div className="flex justify-center gap-4 flex-wrap">
+                                            <button onClick={handleBackupZip} className="px-8 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium shadow-lg flex items-center"><span className="mr-2">📦</span> 下載原始備份 (JSON/Excel)</button>
+                                            <button onClick={handleDownloadAllImages} disabled={imgProcessing} className="px-8 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium shadow-lg flex items-center disabled:opacity-50 disabled:cursor-not-allowed"><span className="mr-2">{imgProcessing ? '⏳' : '🖼️'}</span> {imgProcessing ? '正在繪製報表...' : '下載所有報表 (JPG)'}</button>
+                                            <button onClick={() => {setStep(1); setMergedData([]); setFileName('');}} className="px-8 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium">處理下一份</button>
+                                        </div></div>)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {viewingShareholderDetail && (<div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 animate-in zoom-in-95 flex flex-col max-h-[80vh]"><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="text-lg font-bold text-gray-900">分紅明細: <span className="text-blue-600">{viewingShareholderDetail.name}</span></h3><button onClick={() => setViewingShareholderDetail(null)} className="text-gray-400 hover:text-gray-600">❌</button></div><div className="flex-1 overflow-auto"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50 sticky top-0"><tr><th className="px-4 py-2 text-left">日期</th><th className="px-4 py-2 text-left">任務編號</th><th className="px-4 py-2 text-left">任務分類</th><th className="px-4 py-2 text-right">該案營業額</th><th className="px-4 py-2 text-right">分紅資金池(15%)</th><th className="px-4 py-2 text-right">個人分紅({viewingShareholderDetail.ratio}%)</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.filter(r => r.selected && !r.isDuplicate).map(row => { const financials = calculateFinancials(row); const pool = Math.round(financials.turnover * BONUS_RATIOS.dividends); const share = Math.round(pool * (parseFloat(viewingShareholderDetail.ratio)/100)); return (<tr key={row.id}><td className="px-4 py-2 text-gray-500">{row.date}</td><td className="px-4 py-2 font-mono text-xs">{row.id}</td><td className="px-4 py-2">{row.category}</td><td className="px-4 py-2 text-right">${financials.turnover.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-500">${pool.toLocaleString()}</td><td className="px-4 py-2 text-right font-bold text-green-600">${share.toLocaleString()}</td></tr>); })}</tbody><tfoot className="bg-gray-100 font-bold sticky bottom-0"><tr><td colSpan={5} className="px-4 py-2 text-right">總計</td><td className="px-4 py-2 text-right text-green-700">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+(calculateFinancials(r).turnover * BONUS_RATIOS.dividends),0) * (parseFloat(viewingShareholderDetail.ratio)/100)).toLocaleString()}</td></tr></tfoot></table></div></div></div>)}
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
