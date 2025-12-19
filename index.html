@@ -275,7 +275,7 @@
             );
         };
 
-        // --- Quotation Manager Component (New Feature) ---
+        // --- Quotation Manager Component (Updated with Logo Upload) ---
         const QuotationManager = () => {
             const [quotation, setQuotation] = useState({
                 customerName: '',
@@ -308,6 +308,38 @@
 若因現場環境、設備影響檢測結果，需明列於報告中並由主管補充說明，避免爭議。
 本備註表列旨在保證工程公正透明，事前預防組織責任及利害關係衍生風險，有助事後管理與確保客戶及主管雙重認可。`
             });
+
+            // Logo State
+            const [logo, setLogo] = useState(null);
+
+            // Load logo from local storage on mount
+            useEffect(() => {
+                const savedLogo = localStorage.getItem('dolo_erp_logo');
+                if (savedLogo) {
+                    setLogo(savedLogo);
+                }
+            }, []);
+
+            const handleLogoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const result = e.target.result;
+                        setLogo(result);
+                        localStorage.setItem('dolo_erp_logo', result); // Save to storage
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const removeLogo = (e) => {
+                e.stopPropagation(); // Prevent triggering label click
+                if(window.confirm('確定要移除自訂 Logo 嗎？')) {
+                    setLogo(null);
+                    localStorage.removeItem('dolo_erp_logo');
+                }
+            };
 
             const handleItemChange = (id, field, value) => {
                 const newItems = quotation.items.map(item =>
@@ -358,9 +390,30 @@
                         {/* Header */}
                         <div className="quotation-header flex justify-between items-start mb-6 border-b-2 border-gray-800 pb-4">
                             <div className="flex items-center">
-                                {/* Logo Placeholder - 文字模擬圖片效果 */}
-                                <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-3xl border-4 border-blue-400 mr-4 print:border-black print:text-black print:bg-transparent">
-                                    DOLO
+                                {/* Logo Section with Upload */}
+                                <div className="mr-4 relative group">
+                                    {logo ? (
+                                        <div className="relative">
+                                            <img src={logo} alt="Logo" className="h-24 w-auto object-contain max-w-[200px]" />
+                                            <button 
+                                                onClick={removeLogo}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm shadow-md print:hidden opacity-0 group-hover:opacity-100 transition-opacity"
+                                                title="移除圖片"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <label className="cursor-pointer block relative group">
+                                            <div className="w-20 h-20 bg-red-600 rounded-full flex items-center justify-center text-white font-bold text-3xl border-4 border-blue-400 print:border-black print:text-black print:bg-transparent">
+                                                DOLO
+                                            </div>
+                                            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+                                                點擊<br/>上傳
+                                            </div>
+                                            <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                                        </label>
+                                    )}
                                 </div>
                                 <div>
                                     <h1 className="text-3xl font-bold text-gray-900">杊沐森-DOLO團隊</h1>
