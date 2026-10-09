@@ -212,70 +212,7 @@
             return '';
         };
 
-        // --- Login Component ---
-        const Login = ({ onLogin }) => {
-            const [email, setEmail] = useState('');
-            const [password, setPassword] = useState('');
-            const [error, setError] = useState('');
-
-            const handleLogin = (e) => {
-                e.preventDefault();
-                // Hardcoded credentials as requested
-                if (email === 'artemis19981025@gmail.com' && password === 'artemis19981025') {
-                    onLogin();
-                } else {
-                    setError('帳號或密碼錯誤');
-                }
-            };
-
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans">
-                    <div className="bg-white p-10 rounded-xl shadow-2xl max-w-md w-full border border-gray-200">
-                        <div className="text-center mb-8">
-                            <span className="text-5xl mb-4 block">🔒</span>
-                            <h2 className="text-2xl font-bold text-gray-800">Dolo ERP 系統登入</h2>
-                            <p className="text-gray-500 mt-2 text-sm">請輸入授權帳號密碼以存取系統</p>
-                        </div>
-                        <form onSubmit={handleLogin} className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">帳號 (Email)</label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    placeholder="name@example.com"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">密碼</label>
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
-                            {error && <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded border border-red-100 animate-pulse">{error}</div>}
-                            <button
-                                type="submit"
-                                className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                            >
-                                登入系統
-                            </button>
-                        </form>
-                        <div className="mt-6 text-center text-xs text-gray-400">
-                            &copy; Dolo ERP System. All rights reserved.
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        // --- Quotation Manager Component (Updated with Logo Upload) ---
+        // --- Quotation Manager Component ---
         const QuotationManager = () => {
             const [quotation, setQuotation] = useState({
                 customerName: '',
@@ -309,10 +246,8 @@
 本備註表列旨在保證工程公正透明，事前預防組織責任及利害關係衍生風險，有助事後管理與確保客戶及主管雙重認可。`
             });
 
-            // Logo State
             const [logo, setLogo] = useState(null);
 
-            // Load logo from local storage on mount
             useEffect(() => {
                 const savedLogo = localStorage.getItem('dolo_erp_logo');
                 if (savedLogo) {
@@ -327,14 +262,14 @@
                     reader.onload = (e) => {
                         const result = e.target.result;
                         setLogo(result);
-                        localStorage.setItem('dolo_erp_logo', result); // Save to storage
+                        localStorage.setItem('dolo_erp_logo', result);
                     };
                     reader.readAsDataURL(file);
                 }
             };
 
             const removeLogo = (e) => {
-                e.stopPropagation(); // Prevent triggering label click
+                e.stopPropagation();
                 if(window.confirm('確定要移除自訂 Logo 嗎？')) {
                     setLogo(null);
                     localStorage.removeItem('dolo_erp_logo');
@@ -373,7 +308,6 @@
 
             return (
                 <div className="p-8 animate-in fade-in max-w-5xl mx-auto">
-                    {/* 操作列 (列印時隱藏) */}
                     <div className="flex justify-between items-center mb-6 print:hidden">
                         <h2 className="text-2xl font-bold text-gray-800 flex items-center">
                             <span className="mr-2">📝</span>報價單系統
@@ -385,12 +319,9 @@
                         </div>
                     </div>
 
-                    {/* 報價單預覽/編輯區域 */}
                     <div className="bg-white shadow-lg p-8 rounded-xl border border-gray-200 print:shadow-none print:border-none print:p-0">
-                        {/* Header */}
                         <div className="quotation-header flex justify-between items-start mb-6 border-b-2 border-gray-800 pb-4">
                             <div className="flex items-center">
-                                {/* Logo Section with Upload */}
                                 <div className="mr-4 relative group">
                                     {logo ? (
                                         <div className="relative">
@@ -426,7 +357,6 @@
                             </div>
                         </div>
 
-                        {/* Info Grid */}
                         <div className="quotation-grid grid grid-cols-2 gap-8 mb-6">
                             <div className="space-y-3">
                                 <div className="flex items-center">
@@ -468,7 +398,6 @@
 
                         <div className="text-sm text-gray-500 mb-2 italic print:hidden">※ 詳填估價項目後，若有疑問請電洽聯絡人。</div>
 
-                        {/* Items Table */}
                         <table className="w-full mb-6 border-collapse">
                             <thead>
                                 <tr className="bg-gray-100 border-b-2 border-gray-800">
@@ -509,9 +438,7 @@
                             </tbody>
                         </table>
 
-                        {/* Footer & Totals */}
                         <div className="quotation-footer-grid grid grid-cols-2 gap-8">
-                            {/* Left: Notes & Bank Info */}
                             <div className="text-sm space-y-4">
                                 <div>
                                     <h4 className="font-bold border-b border-gray-300 mb-2 pb-1">注意事項與匯款資訊</h4>
@@ -528,7 +455,6 @@
                                 </div>
                             </div>
 
-                            {/* Right: Totals */}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center py-1">
                                     <span className="font-bold text-gray-600">合計：</span>
@@ -552,7 +478,6 @@
                             </div>
                         </div>
 
-                        {/* Remarks */}
                         <div className="mt-8 pt-4 border-t-2 border-gray-200">
                             <h4 className="font-bold mb-2">備註：</h4>
                             <textarea
@@ -562,7 +487,6 @@
                             ></textarea>
                         </div>
 
-                        {/* Signatures */}
                         <div className="mt-12 flex justify-between print:mt-16">
                             <div className="w-1/3 border-t border-black pt-2 text-center">客戶簽章</div>
                             <div className="w-1/3 border-t border-black pt-2 text-center">DOLO團隊 簽章</div>
@@ -576,7 +500,7 @@
         const Sidebar = ({ currentView, setCurrentView, isCollapsed, setIsCollapsed }) => {
             const menuItems = [
                 { id: 'process', label: '派工結算流程', icon: '📋' },
-                { id: 'quotation', label: '報價單系統', icon: '📝' }, // New Item
+                { id: 'quotation', label: '報價單系統', icon: '📝' },
                 { id: 'task_management', label: '本批任務管理', icon: '📄' },
                 { id: 'department_management', label: '本批部門報表', icon: '🏢' },
                 { id: 'shareholder_management', label: '股東管理', icon: '👥' },
@@ -606,7 +530,6 @@
             );
         };
 
-        // ... (Other components: DepartmentManager, GenericManager, TaskManager remain mostly the same, ensuring print:hidden is applied correctly) ...
         const DepartmentManager = ({ currentData }) => {
             const [selectedReportItem, setSelectedReportItem] = useState(null);
             const reportData = currentData || [];
@@ -621,7 +544,6 @@
             };
 
             const handlePrintReport = (dept, stats) => {
-                 // 準備列印資料
                  const printWindow = window.open('', '_blank');
                  if (!printWindow) { alert('請允許開啟彈跳視窗以列印報表'); return; }
 
@@ -716,7 +638,6 @@
                             </div>
                         )}
                     </div>
-                    {/* Modal for Quick Preview only */}
                     {selectedReportItem && (
                         <div className="fixed inset-0 z-[200] bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto">
@@ -880,7 +801,6 @@
                         value = Math.round(pool * (ratio / 100));
                         return `<tr><td>${job.date}</td><td>${job.id}</td><td>${job.category || job.customerName}</td><td class="text-right">$${turnover.toLocaleString()}</td><td class="text-right">$${value.toLocaleString()}</td></tr>`;
                     } else {
-                        // Units
                         let ratio = 0;
                         if (collectionName === 'sales_units') {
                             value = job.financials?.salesCost;
@@ -983,16 +903,16 @@
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-white">
-    <tr className="bg-gray-50">
-        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">單位名稱</th>
-        {collectionName === 'shareholders' && (
-            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">持股比例</th>
-        )}
-        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">統計說明</th>
-        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">結算總額</th>
-        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase print:hidden">操作</th>
-    </tr>
-</thead>
+                                            <tr className="bg-gray-50">
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">單位名稱</th>
+                                                {collectionName === 'shareholders' && (
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">持股比例</th>
+                                                )}
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">統計說明</th>
+                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">結算總額</th>
+                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase print:hidden">操作</th>
+                                            </tr>
+                                        </thead>
                                         <tbody className="divide-y divide-gray-200">
                                             {data.map(item => {
                                                 const stats = calculateReportStats(item);
@@ -1016,7 +936,6 @@
                         </div>
                     )}
 
-                    {/* Preview Modal for Generic Manager */}
                     {selectedReportItem && (
                         <div className="fixed inset-0 z-[200] bg-gray-900 bg-opacity-75 flex items-center justify-center p-4">
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full p-8 max-h-[90vh] overflow-y-auto">
@@ -1131,26 +1050,104 @@
 
         const TaskManager = ({ constructionUnits, salesUnits, tasks, setTasks }) => {
             const [isEditing, setIsEditing] = useState(false);
+            const [isAdding, setIsAdding] = useState(false);
             const [currentTask, setCurrentTask] = useState(null);
+            
+            // 表單預設資料狀態
+            const emptyTaskState = {
+                id: '',
+                date: new Date().toISOString().slice(0, 10),
+                status: '待處理',
+                customerName: '',
+                category: '',
+                content: '',
+                amount: 0,
+                isCustomFinancials: false,
+                customTurnover: 0,
+                customSalesCost: 0,
+                customConstructionCost: 0,
+                salesUnitId: salesUnits[0]?.id || 'default_hq',
+                salesRatio: salesUnits[0]?.defaultRatio || 0,
+                constructionUnitId: constructionUnits[0]?.id || 'default_hq',
+                constructionRatio: constructionUnits[0]?.defaultRatio || 40,
+                selected: true,
+                isDuplicate: false
+            };
 
-            const handleEdit = (task) => { setCurrentTask({ ...task }); setIsEditing(true); };
+            const [taskForm, setTaskForm] = useState(emptyTaskState);
 
             const recalculateTaskFinancials = (task) => {
                 const amount = Number(task.amount);
+
+                // 若為手動自訂營業額與費用
+                if (task.isCustomFinancials) {
+                    const turnover = Number(task.customTurnover || 0);
+                    const salesCost = Number(task.customSalesCost || 0);
+                    const constructionCost = Number(task.customConstructionCost || 0);
+                    return {
+                        salesCost,
+                        constructionCost,
+                        turnover,
+                        isDoloConstruction: false,
+                        deptBonus: Math.round(turnover * BONUS_RATIOS.dept),
+                        companyFunds: Math.round(turnover * BONUS_RATIOS.company)
+                    };
+                }
+
+                // 自動計算公式模式
                 const cUnit = constructionUnits.find(u => u.id === task.constructionUnitId) || { name: task.constructionUnitName };
                 const sUnit = salesUnits.find(u => u.id === task.salesUnitId) || { name: task.salesUnitName };
-                let salesCost = (sUnit.name === 'dolo團隊') ? 0 : Math.round(amount * (task.salesRatio / 100));
-                let constructionCost = (cUnit.name === 'dolo團隊') ? Math.round(amount * 0.40) : Math.round(amount * (task.constructionRatio / 100));
+                let salesCost = (sUnit?.name === 'dolo團隊') ? 0 : Math.round(amount * (task.salesRatio / 100));
+                let constructionCost = (cUnit?.name === 'dolo團隊') ? Math.round(amount * 0.40) : Math.round(amount * (task.constructionRatio / 100));
                 const turnover = amount - salesCost - constructionCost;
-                return { salesCost, constructionCost, turnover, isDoloConstruction: cUnit.name === 'dolo團隊', deptBonus: Math.round(turnover * BONUS_RATIOS.dept), companyFunds: Math.round(turnover * BONUS_RATIOS.company) };
+                return { 
+                    salesCost, 
+                    constructionCost, 
+                    turnover, 
+                    isDoloConstruction: cUnit?.name === 'dolo團隊', 
+                    deptBonus: Math.round(turnover * BONUS_RATIOS.dept), 
+                    companyFunds: Math.round(turnover * BONUS_RATIOS.company) 
+                };
             };
 
-            const handleSave = () => {
-                if (!currentTask) return;
-                const newFinancials = recalculateTaskFinancials(currentTask);
-                const updatedTasks = tasks.map(t => t.id === currentTask.id ? { ...t, ...currentTask, financials: newFinancials, amount: Number(currentTask.amount) } : t);
+            const handleEdit = (task) => { 
+                setTaskForm({
+                    ...task,
+                    isCustomFinancials: task.isCustomFinancials || false,
+                    customTurnover: task.financials?.turnover || 0,
+                    customSalesCost: task.financials?.salesCost || 0,
+                    customConstructionCost: task.financials?.constructionCost || 0
+                }); 
+                setIsEditing(true); 
+            };
+
+            const handleSaveEdit = () => {
+                if (!taskForm.id) return;
+                const newFinancials = recalculateTaskFinancials(taskForm);
+                const updatedTasks = tasks.map(t => t.id === taskForm.id ? { 
+                    ...t, 
+                    ...taskForm, 
+                    financials: newFinancials, 
+                    amount: Number(taskForm.amount) 
+                } : t);
                 setTasks(updatedTasks);
                 setIsEditing(false);
+            };
+
+            const handleCreateTask = () => {
+                if (!taskForm.id || !taskForm.id.trim()) {
+                    alert('請輸入任務編號／單據編號');
+                    return;
+                }
+                const financials = recalculateTaskFinancials(taskForm);
+                const createdTask = {
+                    ...taskForm,
+                    amount: Number(taskForm.amount),
+                    financials
+                };
+                setTasks([createdTask, ...tasks]);
+                setIsAdding(false);
+                setTaskForm(emptyTaskState);
             };
 
             const handleDelete = (id) => {
@@ -1170,16 +1167,147 @@
 
             return (
                 <div className="p-8 animate-in fade-in">
-                    <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-2">📄</span>任務管理 (本批次)</h2><span className="text-sm text-gray-500">共 {tasks.length} 筆</span></div>
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-4 py-3 text-left font-medium text-gray-500">日期</th><th className="px-4 py-3 text-left font-medium text-gray-500">狀態</th><th className="px-4 py-3 text-left font-medium text-gray-500">任務分類/內容</th><th className="px-4 py-3 text-right font-medium text-gray-500">總金額</th><th className="px-4 py-3 text-right font-medium text-blue-600">營業額</th><th className="px-4 py-3 text-right font-medium text-gray-500">操作</th></tr></thead><tbody className="divide-y divide-gray-200">{tasks.map(task => (<tr key={task.id} className="hover:bg-gray-50"><td className="px-4 py-3 text-gray-500">{task.date}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs ${getStatusColor(task.status)}`}>{task.status || '未標示'}</span></td><td className="px-4 py-3"><div className="font-medium text-gray-900">{task.category || task.customerName}</div><div className="text-xs text-gray-500 truncate max-w-xs">{task.content}</div></td><td className="px-4 py-3 text-right">${task.amount?.toLocaleString()}</td><td className="px-4 py-3 text-right font-bold text-blue-600">${task.financials?.turnover?.toLocaleString() || 0}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEdit(task)} className="text-indigo-600 hover:text-indigo-900 mr-3 p-1">✏️</button><button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-900 p-1">🗑️</button></td></tr>))}{tasks.length === 0 && <tr><td colSpan="7" className="text-center py-10 text-gray-500">尚未匯入資料，請至「派工結算流程」上傳檔案。</td></tr>}</tbody></table></div></div>
-                    {isEditing && currentTask && (<div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4"><div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in zoom-in-95"><h3 className="text-lg font-bold mb-4">編輯任務資料</h3><div className="space-y-4"><div><label className="text-sm">客戶名稱/分類</label><input className="w-full border rounded p-2" value={currentTask.customerName || ''} onChange={e => setCurrentTask({...currentTask, customerName: e.target.value})}/></div><div><label className="text-sm">總金額</label><input type="number" className="w-full border rounded p-2" value={currentTask.amount || 0} onChange={e => setCurrentTask({...currentTask, amount: Number(e.target.value)})}/></div><div className="bg-yellow-50 p-3 rounded-md text-xs text-yellow-800"><span className="mr-1">⚠️</span>系統將依據此新金額，自動重新計算該筆任務的營業額與分紅(依據存檔時的比例)。</div></div><div className="mt-6 flex justify-end space-x-3"><button onClick={() => setIsEditing(false)} className="px-4 py-2 border rounded">取消</button><button onClick={handleSave} className="px-4 py-2 bg-blue-600 text-white rounded">儲存</button></div></div></div>)}
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-2xl font-bold text-gray-800 flex items-center"><span className="mr-2">📄</span>任務管理 (本批次)</h2>
+                        <div className="flex items-center space-x-4">
+                            <span className="text-sm text-gray-500">共 {tasks.length} 筆</span>
+                            <button onClick={() => { setTaskForm(emptyTaskState); setIsAdding(true); }} className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md font-medium text-sm">
+                                <span className="mr-1">➕</span> 新增單據
+                            </button>
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"><div className="overflow-x-auto"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-4 py-3 text-left font-medium text-gray-500">日期</th><th className="px-4 py-3 text-left font-medium text-gray-500">狀態</th><th className="px-4 py-3 text-left font-medium text-gray-500">任務分類/內容</th><th className="px-4 py-3 text-right font-medium text-gray-500">總金額</th><th className="px-4 py-3 text-right font-medium text-blue-600">營業額</th><th className="px-4 py-3 text-right font-medium text-gray-500">操作</th></tr></thead><tbody className="divide-y divide-gray-200">{tasks.map(task => (<tr key={task.id} className="hover:bg-gray-50"><td className="px-4 py-3 text-gray-500">{task.date}</td><td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs ${getStatusColor(task.status)}`}>{task.status || '未標示'}</span></td><td className="px-4 py-3"><div className="font-medium text-gray-900 flex items-center">{task.category || task.customerName} {task.isCustomFinancials && <span className="ml-2 text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">自訂金額</span>}</div><div className="text-xs text-gray-500 truncate max-w-xs">{task.content}</div></td><td className="px-4 py-3 text-right">${task.amount?.toLocaleString()}</td><td className="px-4 py-3 text-right font-bold text-blue-600">${task.financials?.turnover?.toLocaleString() || 0}</td><td className="px-4 py-3 text-right"><button onClick={() => handleEdit(task)} className="text-indigo-600 hover:text-indigo-900 mr-3 p-1">✏️</button><button onClick={() => handleDelete(task.id)} className="text-red-600 hover:text-red-900 p-1">🗑️</button></td></tr>))}{tasks.length === 0 && <tr><td colSpan="7" className="text-center py-10 text-gray-500">尚未匯入或建立資料，可點選上方「新增單據」或至「派工結算流程」上傳檔案。</td></tr>}</tbody></table></div></div>
+
+                    {/* 新增 / 編輯單據 Modal */}
+                    {(isAdding || isEditing) && (
+                        <div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-in zoom-in-95">
+                                <h3 className="text-lg font-bold mb-4">{isAdding ? '新增單據／任務' : '編輯單據／任務'}</h3>
+                                <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-700">單據/任務編號 *</label>
+                                            <input type="text" disabled={isEditing} className={`w-full border rounded p-2 text-sm ${isEditing ? 'bg-gray-100' : ''}`} placeholder="如 TASK-20261001" value={taskForm.id} onChange={e => setTaskForm({...taskForm, id: e.target.value})} />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-700">日期</label>
+                                            <input type="date" className="w-full border rounded p-2 text-sm" value={taskForm.date} onChange={e => setTaskForm({...taskForm, date: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-700">狀態</label>
+                                            <select className="w-full border rounded p-2 text-sm" value={taskForm.status} onChange={e => setTaskForm({...taskForm, status: e.target.value})}>
+                                                <option value="待處理">待處理</option>
+                                                <option value="進行中">進行中</option>
+                                                <option value="已完成">已完成</option>
+                                                <option value="逾期完成">逾期完成</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-bold text-gray-700">客戶名稱/分類</label>
+                                            <input type="text" className="w-full border rounded p-2 text-sm" placeholder="如 南區_抓漏" value={taskForm.customerName} onChange={e => setTaskForm({...taskForm, customerName: e.target.value, category: e.target.value})} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-700">任務說明 / 內容</label>
+                                        <textarea className="w-full border rounded p-2 text-sm h-16" placeholder="請輸入施作詳細內容..." value={taskForm.content} onChange={e => setTaskForm({...taskForm, content: e.target.value})}></textarea>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-700">總金額 (\$)</label>
+                                        <input type="number" className="w-full border rounded p-2 text-sm" value={taskForm.amount} onChange={e => {
+                                            const amt = Number(e.target.value);
+                                            setTaskForm({
+                                                ...taskForm, 
+                                                amount: amt,
+                                                // 若非自訂，預設自動推算 customTurnover 以供切換時預覽
+                                                customTurnover: taskForm.isCustomFinancials ? taskForm.customTurnover : amt
+                                            });
+                                        }} />
+                                    </div>
+
+                                    {/* 計算機制設定區塊 */}
+                                    <div className="border rounded-lg p-3 bg-gray-50 space-y-3">
+                                        <div className="flex items-center justify-between border-b pb-2">
+                                            <label className="text-xs font-bold text-gray-800">計算機制</label>
+                                            <div className="flex items-center space-x-2">
+                                                <input type="checkbox" id="customFinancialsToggle" checked={taskForm.isCustomFinancials} onChange={e => setTaskForm({
+                                                    ...taskForm, 
+                                                    isCustomFinancials: e.target.checked,
+                                                    // 切換時帶入預設值
+                                                    customTurnover: taskForm.customTurnover || taskForm.amount
+                                                })} className="h-4 w-4 text-blue-600 rounded"/>
+                                                <label htmlFor="customFinancialsToggle" className="text-xs text-blue-700 font-bold cursor-pointer">啟用「直接修改營業額與費用」</label>
+                                            </div>
+                                        </div>
+
+                                        {taskForm.isCustomFinancials ? (
+                                            /* 手動自訂金額模式 */
+                                            <div className="space-y-2 bg-blue-50/50 p-2 rounded border border-blue-100">
+                                                <div>
+                                                    <label className="text-xs font-bold text-blue-900">自訂營業額 (\$) *</label>
+                                                    <input type="number" className="w-full border border-blue-300 rounded p-1.5 text-sm bg-white font-bold text-blue-700" value={taskForm.customTurnover} onChange={e => setTaskForm({...taskForm, customTurnover: Number(e.target.value)})} />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 pt-1">
+                                                    <div>
+                                                        <label className="text-[11px] font-medium text-gray-600">自訂業務分潤 (\$)</label>
+                                                        <input type="number" className="w-full border rounded p-1.5 text-xs bg-white" value={taskForm.customSalesCost} onChange={e => setTaskForm({...taskForm, customSalesCost: Number(e.target.value)})} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-medium text-gray-600">自訂施工費用 (\$)</label>
+                                                        <input type="number" className="w-full border rounded p-1.5 text-xs bg-white" value={taskForm.customConstructionCost} onChange={e => setTaskForm({...taskForm, customConstructionCost: Number(e.target.value)})} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* 預設公式比例模式 */
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="text-xs font-bold text-gray-700">業務單位</label>
+                                                    <select className="w-full border rounded p-1.5 text-sm bg-white" value={taskForm.salesUnitId} onChange={e => {
+                                                        const selectedUnit = salesUnits.find(u => u.id === e.target.value);
+                                                        setTaskForm({
+                                                            ...taskForm,
+                                                            salesUnitId: e.target.value,
+                                                            salesRatio: selectedUnit ? selectedUnit.defaultRatio : 0
+                                                        });
+                                                    }}>
+                                                        {salesUnits.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs font-bold text-gray-700">施工單位</label>
+                                                    <select className="w-full border rounded p-1.5 text-sm bg-white" value={taskForm.constructionUnitId} onChange={e => {
+                                                        const selectedUnit = constructionUnits.find(u => u.id === e.target.value);
+                                                        setTaskForm({
+                                                            ...taskForm,
+                                                            constructionUnitId: e.target.value,
+                                                            constructionRatio: selectedUnit ? selectedUnit.defaultRatio : 40
+                                                        });
+                                                    }}>
+                                                        {constructionUnits.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex justify-end space-x-3 border-t pt-3">
+                                    <button onClick={() => { setIsAdding(false); setIsEditing(false); }} className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-100 text-sm">取消</button>
+                                    <button onClick={isAdding ? handleCreateTask : handleSaveEdit} className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 font-medium">
+                                        {isAdding ? '建立單據' : '儲存變更'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
 
         function App() {
             const [user, setUser] = useState(null);
-            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [isLoggedIn, setIsLoggedIn] = useState(true);
             const [currentView, setCurrentView] = useState('process');
             const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
             const [step, setStep] = useState(1);
@@ -1253,7 +1381,7 @@
                     }
 
                     const newId = `temp_${type}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-                    const defaultRatio = type === 'c' ? 60 : 10;
+                    const defaultRatio = type === 'c' ? 70 : 10;
                     const newUnit = {
                         id: newId,
                         name: cleanName,
@@ -1273,7 +1401,6 @@
                     const taskId = String(getFuzzyValue(task, '任務編號')).trim();
                     if (!taskId) return;
                     const report = reportMap.get(taskId) || {};
-                    // 將「全款金額」放在最優先順位
                     let rawAmount = getFuzzyValue(report, '全款金額', '實際收款金額', '實收金額') || '0';
                     if (typeof rawAmount === 'string') rawAmount = rawAmount.replace(/,/g, '');
                     const amount = parseFloat(rawAmount) || 0;
@@ -1332,6 +1459,22 @@
             };
 
             const calculateFinancials = (row) => {
+                // 若手動勾選並輸入自訂財務數值，直接返回自訂計算
+                if (row.isCustomFinancials) {
+                    const turnover = Number(row.customTurnover || 0);
+                    const salesCost = Number(row.customSalesCost || 0);
+                    const constructionCost = Number(row.customConstructionCost || 0);
+                    return {
+                        salesCost,
+                        constructionCost,
+                        turnover,
+                        isDoloConstruction: false,
+                        deptBonus: Math.round(turnover * BONUS_RATIOS.dept),
+                        companyFunds: Math.round(turnover * BONUS_RATIOS.company)
+                    };
+                }
+
+                // 公式計算
                 const amount = row.amount;
                 const cUnit = constructionUnits.find(u => u.id === row.constructionUnitId) || constructionUnits[0] || {};
                 const sUnit = salesUnits.find(u => u.id === row.salesUnitId) || salesUnits[0] || {};
@@ -1349,16 +1492,10 @@
                 }, 500);
             };
 
-            // ... (generateReportImage, handleDownloadAllImages, handleBackupZip remain same as provided code, ensuring print compatibility) ...
-
             const dataWithFinancials = mergedData.map(row => ({
                 ...row,
                 financials: calculateFinancials(row)
             }));
-
-            if (!isLoggedIn) {
-                return <Login onLogin={() => setIsLoggedIn(true)} />;
-            }
 
             return (
                 <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden">
@@ -1367,7 +1504,7 @@
                         <main className="flex-1 overflow-y-auto bg-gray-50 print:bg-white print:overflow-visible">
                             {currentView === 'quotation' && <QuotationManager />}
                             {currentView === 'settings_sales' && <GenericManager title="業務單位管理" icon="💼" collectionName="sales_units" fields={[{ key: 'name', label: '姓名', required: true }, { key: 'phone', label: '電話' }, { key: 'defaultRatio', label: '預設分紅 (%)', type: 'number', defaultValue: 10 }]} localData={salesUnits} setLocalData={setSalesUnits} currentReportData={dataWithFinancials} />}
-                            {currentView === 'settings_construction' && <GenericManager title="施工單位管理" icon="👷" collectionName="construction_units" fields={[{ key: 'name', label: '姓名', required: true }, { key: 'phone', label: '電話' }, { key: 'defaultRatio', label: '預設分紅 (%)', type: 'number', defaultValue: 60 }, { key: 'isInternal', label: '公司內部單位', type: 'boolean', defaultValue: false }]} localData={constructionUnits} setLocalData={setConstructionUnits} currentReportData={dataWithFinancials} />}
+                            {currentView === 'settings_construction' && <GenericManager title="施工單位管理" icon="👷" collectionName="construction_units" fields={[{ key: 'name', label: '姓名', required: true }, { key: 'phone', label: '電話' }, { key: 'defaultRatio', label: '預設分紅 (%)', type: 'number', defaultValue: 70 }, { key: 'isInternal', label: '公司內部單位', type: 'boolean', defaultValue: false }]} localData={constructionUnits} setLocalData={setConstructionUnits} currentReportData={dataWithFinancials} />}
                             {currentView === 'shareholder_management' && <GenericManager title="股東管理" icon="👥" collectionName="shareholders" fields={[{ key: 'name', label: '股東姓名', required: true }, { key: 'role', label: '職稱/角色' }, { key: 'shares', label: '投資股數', type: 'number', required: true }, { key: 'ratio', label: '分紅百分比 (%)', type: 'number', required: true }, { key: 'note', label: '備註' }]} enableBatchImport={true} currentReportData={dataWithFinancials} localData={shareholders} setLocalData={setShareholders} />}
                             {currentView === 'department_management' && <DepartmentManager currentData={dataWithFinancials} />}
                             {currentView === 'task_management' && <TaskManager constructionUnits={constructionUnits} salesUnits={salesUnits} tasks={dataWithFinancials} setTasks={setMergedData} />}
@@ -1379,17 +1516,33 @@
                                     <div className="mb-8"><div className="flex justify-between max-w-4xl mx-auto relative"><div className="absolute top-1/2 w-full h-1 bg-gray-200 -z-10 rounded"></div>{[{id: 1, name: '上傳'}, {id: 2, name: '核對'}, {id: 3, name: '拆帳'}, {id: 4, name: '分配'}, {id: 5, name: '分紅'}].map(s => (<div key={s.id} className={`flex flex-col items-center bg-gray-50 px-3 ${step >= s.id ? 'text-blue-600' : 'text-gray-400'}`}><div className={`w-8 h-8 rounded-full flex items-center justify-center border-4 transition-all ${step >= s.id ? 'bg-white border-blue-600' : 'bg-white border-gray-300'}`}><span className="text-xs font-bold">{s.id}</span></div><span className="text-xs font-bold mt-1">{s.name}</span></div>))}</div></div>
                                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 min-h-[500px]">
                                         {step === 1 && (<div className="space-y-6 animate-in fade-in slide-in-from-bottom-4"><div className="bg-white border-2 border-dashed border-blue-300 rounded-xl p-10 text-center hover:border-blue-500 transition-all shadow-sm group"><div className="bg-blue-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300"><span className="text-4xl">📊</span></div><h3 className="text-xl font-bold text-gray-800 mb-2">上傳 Excel 派工檔案</h3><div className="flex justify-center gap-4 mt-4"><div className="relative inline-block"><input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} disabled={!libReady || loading} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"/><button className="px-8 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 flex items-center font-medium">{loading ? '處理中...' : '選擇檔案'} {loading && <span className="ml-2 animate-spin">🔄</span>}</button></div></div><p className="text-sm text-gray-500 mt-4">系統將自動讀取 Excel 內容進行計算</p></div>{error && <div className="p-4 bg-red-50 text-red-700 rounded-lg flex items-center border border-red-100"><span className="mr-3">⚠️</span>{error}</div>}</div>)}
-                                        {step === 2 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-4"><div className="flex justify-between items-center mb-4"><div className="bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg text-sm border border-yellow-200 flex items-center"><span className="mr-2">⚠️</span>預設勾選：金額 &gt; $500 的項目</div><div className="text-sm text-gray-500">共 {mergedData.length} 筆</div></div><div className="overflow-x-auto border rounded-lg"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-3 py-3 w-10">選</th><th className="px-3 py-3 text-left font-medium text-gray-500">日期</th><th className="px-3 py-3">任務編號</th><th className="px-3 py-3">內容</th><th className="px-3 py-3 bg-orange-50 text-orange-800">建立人</th><th className="px-3 py-3 bg-green-50 text-green-800">結案人</th><th className="px-3 py-3 text-right">金額</th><th className="px-3 py-3 w-10">刪</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.map((row, i) => (<tr key={i} className={row.selected ? 'bg-blue-50/30' : ''}><td className="px-3 py-3 text-center"><input type="checkbox" checked={row.selected} onChange={e=>updateRowData(i,'selected',e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600"/></td><td className="px-3 py-3 text-gray-500 font-mono text-xs">{row.date}</td><td className="px-3 py-3"><div className="font-medium text-gray-900">{row.id}</div>{row.isDuplicate && <span className="text-xs text-red-600 bg-red-100 px-1 rounded">重複</span>}</td><td className="px-3 py-3 text-gray-500 truncate max-w-[200px]">{row.content}</td><td className="px-3 py-3 bg-orange-50/20">{row.creator}</td><td className="px-3 py-3 bg-green-50/20">{row.closer}</td><td className="px-3 py-3 text-right font-medium">${row.amount.toLocaleString()}</td><td className="px-3 py-3 text-center"><button onClick={()=>{const n=[...mergedData];n.splice(i,1);setMergedData(n)}} className="text-red-400 hover:text-red-600">🗑️</button></td></tr>))}</tbody></table></div><div className="flex justify-between pt-4"><button onClick={()=>{setStep(1);setMergedData([])}} className="text-gray-500 hover:text-gray-900">重新上傳</button><button onClick={()=>setStep(3)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">下一步</button></div></div>)}
-                                        {/* Steps 3, 4, 5, 6 remain largely the same, just keeping structure valid */}
-                                        {step === 3 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-4"><div className="overflow-x-auto overflow-y-visible border rounded-lg"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-3 py-3 text-left w-24">結案日期</th><th className="px-3 py-3 text-left w-28">分類</th><th className="px-3 py-3 text-left w-32">客戶</th><th className="px-3 py-3 text-right">總金額</th><th className="px-3 py-3 text-left w-48">業務單位 (主導)</th><th className="px-3 py-3 text-left w-48">施工單位</th><th className="px-3 py-3 text-right bg-blue-50 text-blue-800">營業額</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.filter(r=>r.selected && !r.isDuplicate).map((row) => { const realIndex = mergedData.findIndex(r => r.id === row.id); const financials = calculateFinancials(row); return (<tr key={row.id}><td className="px-3 py-3 text-gray-500">{row.date}</td><td className="px-3 py-3"><span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{row.category}</span></td><td className="px-3 py-3 font-medium text-gray-700">{row.customerName}</td><td className="px-3 py-3 text-right font-bold text-gray-900">${row.amount.toLocaleString()}</td><td className="px-3 py-3"><select value={row.salesUnitId} onChange={e=>updateRowData(realIndex,'salesUnitId',e.target.value)} className="block w-full border-gray-300 rounded-md text-xs shadow-sm focus:ring-purple-500 focus:border-purple-500 cursor-pointer">{salesUnits.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select><div className="text-xs text-purple-600 mt-1 pl-1">分潤 ({row.salesRatio}%): ${financials.salesCost.toLocaleString()}</div></td><td className="px-3 py-3"><select value={row.constructionUnitId} onChange={e=>updateRowData(realIndex,'constructionUnitId',e.target.value)} className="block w-full border-gray-300 rounded-md text-xs shadow-sm focus:ring-orange-500 focus:border-orange-500 cursor-pointer">{constructionUnits.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select><div className="text-xs text-orange-600 mt-1 pl-1">{financials.isDoloConstruction ? (<span>扣除: ${financials.constructionCost.toLocaleString()} <span className="text-gray-400">(40%)</span></span>) : (<span>扣除: ${financials.constructionCost.toLocaleString()} <span className="text-gray-400">({row.constructionRatio}%)</span></span>)}</div></td><td className="px-3 py-3 text-right bg-blue-50 font-bold text-blue-700">${financials.turnover.toLocaleString()}</td></tr>); })}</tbody><tfoot className="bg-gray-800 text-white"><tr><td colSpan={6} className="px-6 py-4 text-right">本批次總營業額</td><td className="px-6 py-4 text-right text-xl font-bold text-green-400">${mergedData.filter(r=>r.selected && !r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0).toLocaleString()}</td></tr></tfoot></table></div><div className="flex justify-between pt-4"><button onClick={()=>setStep(2)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={()=>setStep(4)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">下一步：查看營收分配</button></div></div>)}
-                                        {step === 4 && <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4"><div className="grid grid-cols-1 md:grid-cols-2 gap-6"><div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6 rounded-xl flex flex-col items-center"><h3 className="text-lg font-medium text-blue-800 mb-2">本批次總金額</h3><div className="text-4xl font-extrabold text-blue-600 tracking-tight">${mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+r.amount,0).toLocaleString()}</div></div><div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-6 rounded-xl flex flex-col items-center"><h3 className="text-lg font-medium text-green-800 mb-2">本批次總營業額</h3><div className="text-4xl font-extrabold text-green-600 tracking-tight">${mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0).toLocaleString()}</div></div></div><div className="flex justify-between pt-6"><button onClick={() => setStep(3)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={() => setStep(5)} className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md flex items-center font-bold">下一步：股東分紅 <span className="ml-2">➡️</span></button></div></div>}
+                                        {step === 2 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-4"><div className="flex justify-between items-center mb-4"><div className="bg-yellow-50 text-yellow-800 px-4 py-2 rounded-lg text-sm border border-yellow-200 flex items-center"><span className="mr-2">⚠️</span>預設勾選：金額 &gt; \$500 的項目</div><div className="text-sm text-gray-500">共 {mergedData.length} 筆</div></div><div className="overflow-x-auto border rounded-lg"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-3 py-3 w-10">選</th><th className="px-3 py-3 text-left font-medium text-gray-500">日期</th><th className="px-3 py-3">任務編號</th><th className="px-3 py-3">內容</th><th className="px-3 py-3 bg-orange-50 text-orange-800">建立人</th><th className="px-3 py-3 bg-green-50 text-green-800">結案人</th><th className="px-3 py-3 text-right">金額</th><th className="px-3 py-3 w-10">刪</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.map((row, i) => (<tr key={i} className={row.selected ? 'bg-blue-50/30' : ''}><td className="px-3 py-3 text-center"><input type="checkbox" checked={row.selected} onChange={e=>updateRowData(i,'selected',e.target.checked)} className="h-4 w-4 rounded border-gray-300 text-blue-600"/></td><td className="px-3 py-3 text-gray-500 font-mono text-xs">{row.date}</td><td className="px-3 py-3"><div className="font-medium text-gray-900">{row.id}</div>{row.isDuplicate && <span className="text-xs text-red-600 bg-red-100 px-1 rounded">重複</span>}</td><td className="px-3 py-3 text-gray-500 truncate max-w-[200px]">{row.content}</td><td className="px-3 py-3 bg-orange-50/20">{row.creator}</td><td className="px-3 py-3 bg-green-50/20">{row.closer}</td><td className="px-3 py-3 text-right font-medium">\${row.amount.toLocaleString()}</td><td className="px-3 py-3 text-center"><button onClick={()=>{const n=[...mergedData];n.splice(i,1);setMergedData(n)}} className="text-red-400 hover:text-red-600">🗑️</button></td></tr>))}</tbody></table></div><div className="flex justify-between pt-4"><button onClick={()=>{setStep(1);setMergedData([])}} className="text-gray-500 hover:text-gray-900">重新上傳</button><button onClick={()=>setStep(3)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">下一步</button></div></div>)}
+                                        {step === 3 && (<div className="space-y-4 animate-in fade-in slide-in-from-bottom-4"><div className="overflow-x-auto overflow-y-visible border rounded-lg"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50"><tr><th className="px-3 py-3 text-left w-24">結案日期</th><th className="px-3 py-3 text-left w-28">分類</th><th className="px-3 py-3 text-left w-32">客戶</th><th className="px-3 py-3 text-right">總金額</th><th className="px-3 py-3 text-left w-48">業務單位 (主導)</th><th className="px-3 py-3 text-left w-48">施工單位</th><th className="px-3 py-3 text-right bg-blue-50 text-blue-800">營業額</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.filter(r=>r.selected && !r.isDuplicate).map((row) => { const realIndex = mergedData.findIndex(r => r.id === row.id); const financials = calculateFinancials(row); return (<tr key={row.id}><td className="px-3 py-3 text-gray-500">{row.date}</td><td className="px-3 py-3"><span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">{row.category}</span></td><td className="px-3 py-3 font-medium text-gray-700">{row.customerName}</td><td className="px-3 py-3 text-right font-bold text-gray-900">\${row.amount.toLocaleString()}</td><td className="px-3 py-3"><select value={row.salesUnitId} onChange={e=>updateRowData(realIndex,'salesUnitId',e.target.value)} className="block w-full border-gray-300 rounded-md text-xs shadow-sm focus:ring-purple-500 focus:border-purple-500 cursor-pointer">{salesUnits.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select><div className="text-xs text-purple-600 mt-1 pl-1">分潤 ({row.salesRatio}%): \${financials.salesCost.toLocaleString()}</div></td><td className="px-3 py-3"><select value={row.constructionUnitId} onChange={e=>updateRowData(realIndex,'constructionUnitId',e.target.value)} className="block w-full border-gray-300 rounded-md text-xs shadow-sm focus:ring-orange-500 focus:border-orange-500 cursor-pointer">{constructionUnits.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select><div className="text-xs text-orange-600 mt-1 pl-1">{financials.isDoloConstruction ? (<span>扣除: \${financials.constructionCost.toLocaleString()} <span className="text-gray-400">(40%)</span></span>) : (<span>扣除: \${financials.constructionCost.toLocaleString()} <span className="text-gray-400">({row.constructionRatio}%)</span></span>)}</div></td><td className="px-3 py-3 text-right bg-blue-50 font-bold text-blue-700">\${financials.turnover.toLocaleString()}</td></tr>); })}</tbody><tfoot className="bg-gray-800 text-white"><tr><td colSpan={6} className="px-6 py-4 text-right">本批次總營業額</td><td className="px-6 py-4 text-right text-xl font-bold text-green-400">\${mergedData.filter(r=>r.selected && !r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0).toLocaleString()}</td></tr></tfoot></table></div><div className="flex justify-between pt-4"><button onClick={()=>setStep(2)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={()=>setStep(4)} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md">下一步：查看營收分配</button></div></div>)}
+                                        {step === 4 && (
+                                            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 p-6 rounded-xl flex flex-col items-center">
+                                                        <h3 className="text-lg font-medium text-blue-800 mb-2">本批次總金額</h3>
+                                                        <div className="text-4xl font-extrabold text-blue-600 tracking-tight">\${mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+r.amount,0).toLocaleString()}</div>
+                                                    </div>
+                                                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 p-6 rounded-xl flex flex-col items-center">
+                                                        <h3 className="text-lg font-medium text-green-800 mb-2">本批次總營業額</h3>
+                                                        <div className="text-4xl font-extrabold text-green-600 tracking-tight">\${mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+calculateFinancials(r).turnover,0).toLocaleString()}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between pt-6">
+                                                    <button onClick={() => setStep(3)} className="text-gray-500 hover:text-gray-900">上一步</button>
+                                                    <button onClick={() => setStep(5)} className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md flex items-center font-bold">下一步：股東分紅 <span className="ml-2">➡️</span></button>
+                                                </div>
+                                            </div>
+                                        )}
                                         {step === 5 && <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4"><div className="flex justify-between pt-6"><button onClick={() => setStep(4)} className="text-gray-500 hover:text-gray-900">上一步</button><button onClick={saveToDatabase} disabled={loading} className="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 shadow-md flex items-center font-bold disabled:opacity-50 disabled:cursor-not-allowed">{loading ? '儲存中...' : '確認結算'} <span className="ml-2">💾</span></button></div></div>}
                                         {step === 6 && <div className="text-center py-20 animate-in zoom-in"><span className="text-6xl mb-4 block">✅</span><h2 className="text-3xl font-bold text-gray-900 mb-2">計算完成！</h2><div className="flex justify-center gap-4 flex-wrap"><button onClick={() => {setStep(1); setMergedData([]); setFileName('');}} className="px-8 py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium">處理下一份</button></div></div>}
                                     </div>
                                 </div>
                             )}
 
-                            {viewingShareholderDetail && (<div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 print:hidden"><div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 animate-in zoom-in-95 flex flex-col max-h-[80vh]"><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="text-lg font-bold text-gray-900">分紅明細: <span className="text-blue-600">{viewingShareholderDetail.name}</span></h3><button onClick={() => setViewingShareholderDetail(null)} className="text-gray-400 hover:text-gray-600">❌</button></div><div className="flex-1 overflow-auto"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50 sticky top-0"><tr><th className="px-4 py-2 text-left">日期</th><th className="px-4 py-2 text-left">任務編號</th><th className="px-4 py-2 text-left">任務分類</th><th className="px-4 py-2 text-right">該案營業額</th><th className="px-4 py-2 text-right">分紅資金池(15%)</th><th className="px-4 py-2 text-right">個人分紅({viewingShareholderDetail.ratio}%)</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.filter(r => r.selected && !r.isDuplicate).map(row => { const financials = calculateFinancials(row); const pool = Math.round(financials.turnover * BONUS_RATIOS.dividends); const share = Math.round(pool * (parseFloat(viewingShareholderDetail.ratio)/100)); return (<tr key={row.id}><td className="px-4 py-2 text-gray-500">{row.date}</td><td className="px-4 py-2 font-mono text-xs">{row.id}</td><td className="px-4 py-2">{row.category}</td><td className="px-4 py-2 text-right">${financials.turnover.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-500">${pool.toLocaleString()}</td><td className="px-4 py-2 text-right font-bold text-green-600">${share.toLocaleString()}</td></tr>); })}</tbody><tfoot className="bg-gray-100 font-bold sticky bottom-0"><tr><td colSpan={5} className="px-4 py-2 text-right">總計</td><td className="px-4 py-2 text-right text-green-700">${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+(calculateFinancials(r).turnover * BONUS_RATIOS.dividends),0) * (parseFloat(viewingShareholderDetail.ratio)/100)).toLocaleString()}</td></tr></tfoot></table></div></div></div>)}
+                            {viewingShareholderDetail && (<div className="fixed inset-0 z-[100] bg-gray-500 bg-opacity-75 flex items-center justify-center p-4 print:hidden"><div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 animate-in zoom-in-95 flex flex-col max-h-[80vh]"><div className="flex justify-between items-center mb-4 border-b pb-2"><h3 className="text-lg font-bold text-gray-900">分紅明細: <span className="text-blue-600">{viewingShareholderDetail.name}</span></h3><button onClick={() => setViewingShareholderDetail(null)} className="text-gray-400 hover:text-gray-600">❌</button></div><div className="flex-1 overflow-auto"><table className="min-w-full divide-y divide-gray-200 text-sm"><thead className="bg-gray-50 sticky top-0"><tr><th className="px-4 py-2 text-left">日期</th><th className="px-4 py-2 text-left">任務編號</th><th className="px-4 py-2 text-left">任務分類</th><th className="px-4 py-2 text-right">該案營業額</th><th className="px-4 py-2 text-right">分紅資金池(15%)</th><th className="px-4 py-2 text-right">個人分紅({viewingShareholderDetail.ratio}%)</th></tr></thead><tbody className="divide-y divide-gray-200">{mergedData.filter(r => r.selected && !r.isDuplicate).map(row => { const financials = calculateFinancials(row); const pool = Math.round(financials.turnover * BONUS_RATIOS.dividends); const share = Math.round(pool * (parseFloat(viewingShareholderDetail.ratio)/100)); return (<tr key={row.id}><td className="px-4 py-2 text-gray-500">{row.date}</td><td className="px-4 py-2 font-mono text-xs">{row.id}</td><td className="px-4 py-2">{row.category}</td><td className="px-4 py-2 text-right">\${financials.turnover.toLocaleString()}</td><td className="px-4 py-2 text-right text-gray-500">\${pool.toLocaleString()}</td><td className="px-4 py-2 text-right font-bold text-green-600">\${share.toLocaleString()}</td></tr>); })}</tbody><tfoot className="bg-gray-100 font-bold sticky bottom-0"><tr><td colSpan={5} className="px-4 py-2 text-right">總計</td><td className="px-4 py-2 text-right text-green-700">\${Math.round(mergedData.filter(r=>r.selected&&!r.isDuplicate).reduce((acc,r)=>acc+(calculateFinancials(r).turnover * BONUS_RATIOS.dividends),0) * (parseFloat(viewingShareholderDetail.ratio)/100)).toLocaleString()}</td></tr></tfoot></table></div></div></div>)}
                         </main>
                     </div>
                 </div>
